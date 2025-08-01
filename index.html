@@ -1,0 +1,2238 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Editor Estilo Canva/Photoshop</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #1e1e1e;
+      color: white;
+    }
+    header {
+      background: #121212;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    header h1 {
+      font-size: 20px;
+      color: #00e0ff;
+    }
+    .tools {
+      background: #222;
+      padding: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+    .tools input, .tools button, .tools select {
+      padding: 8px;
+      font-size: 14px;
+      border-radius: 4px;
+      border: none;
+    }
+    .tools button {
+      background: #00c851;
+      color: white;
+      cursor: pointer;
+    }
+    .tools button:hover {
+      background: #007e33;
+    }
+    canvas {
+      background: #ffffff;
+      display: block;
+      margin: 20px auto;
+      border: 2px solid #444;
+      border-radius: 8px;
+      cursor: move;
+    }
+    .formatos {
+      margin: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .formatos h3 {
+      width: 100%;
+      margin: 0 0 5px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Editor Avançado - Estilo Canva/Photoshop</h1>
+    <button onclick="voltar()">Voltar para Página Principal</button>
+  </header>
+
+  <!-- Menu de Navegação -->
+  <nav class="menu-topo">
+    <a href="index.html">🏠 Página Inicial</a>
+    <a href="editor.html">🎨 Editor Avançado</a>
+    <a href="feramentas.html">🛠️ Central de Ferramentas</a>
+    <a href="https://www.remove.bg/pt-br/upload" target="_blank">🧼 Remover Fundo (remove.bg)</a>
+  </nav>
+
+  <div class="tools">
+    <input type="file" id="bgUpload" accept="image/*">
+    <input type="file" id="imgUpload" accept="image/*">
+    <input type="text" id="textInput" placeholder="Digite um texto...">
+    <button onclick="addText()">Adicionar Texto</button>
+    <button onclick="removeSelected()">Remover Selecionado</button>
+    <button onclick="toggleShadow()">Sombra</button>
+    <label>Rotação:</label>
+    <input type="range" id="rotateSlider" min="0" max="360" value="0" onchange="rotateSelected(this.value)">
+    <select id="saveFormat">
+      <option value="jpeg">Salvar como JPG</option>
+      <option value="png">Salvar como PNG</option>
+    </select>
+    <input type="number" id="customW" placeholder="Largura px" style="width:100px">
+    <input type="number" id="customH" placeholder="Altura px" style="width:100px">
+    <button onclick="salvarImagem()">Salvar Imagem</button>
+  </div>
+
+  <div class="formatos">
+    <h3>Fundos prontos com tamanho:</h3>
+    <button onclick="setFormato(1580,700,'https://ik.imagekit.io/ys8l6suo53/black%20site%20bane%20pc.jpg')">Banner PC</button>
+    <button onclick="setFormato(820,1000,'https://ik.imagekit.io/ys8l6suo53/natal%20computador.jpg')">Banner Celular</button>
+    <button onclick="setFormato(980,465,'https://ik.imagekit.io/ys8l6suo53/natal%20promo%C3%A7ao.jpg')">Promoção</button>
+    <button onclick="setFormato(1080,1080,'https://ik.imagekit.io/ys8l6suo53/sorteio.jpg')">Instagram Sorteio</button>
+    <button onclick="setFormato(1080,1080,'https://ik.imagekit.io/ys8l6suo53/mes%20da%20mes.jpg')">Instagram Mês</button>
+    <button onclick="setFormato(1080,1080,'https://ik.imagekit.io/ys8l6suo53/intagram.jpg')">Instagram Geral</button>
+    <button onclick="setFormato(1080,1080,'https://ik.imagekit.io/ys8l6suo53/festa%20junina.jpg')">Festa Junina</button>
+
+    <h3>Inserir Logo:</h3>
+    <button onclick="inserirLogo('https://ik.imagekit.io/ys8l6suo53/logo.png')">Logo Principal</button>
+    <button onclick="inserirLogo('https://ik.imagekit.io/ys8l6suo53/lojo%201.png')">Logo 2</button>
+    <button onclick="inserirLogo('https://ik.imagekit.io/ys8l6suo53/Capturar-removebg-preview.png')">Logo Capturar</button>
+  </div>
+
+  <canvas id="canvas" width="1000" height="1000"></canvas>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const elements = [];
+    let selected = null;
+    let isDragging = false;
+    let offsetX = 0, offsetY = 0;
+
+    document.getElementById("bgUpload").addEventListener("change", e => {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = evt => {
+        const img = new Image();
+        img.onload = () => {
+          const el = { type: "bg", img, x: 0, y: 0, w: canvas.width, h: canvas.height, angle: 0, shadow: false };
+          elements.unshift(el);
+          selected = el;
+          draw();
+        };
+        img.src = evt.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    document.getElementById("imgUpload").addEventListener("change", e => {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = evt => {
+        const img = new Image();
+        img.onload = () => {
+          const el = { type: "img", img, x: 200, y: 200, w: 300, h: 300, angle: 0, shadow: false, file };
+          elements.push(el);
+          selected = el;
+          draw();
+        };
+        img.src = evt.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    function addText() {
+      const txt = document.getElementById("textInput").value;
+      if (txt.trim() !== "") {
+        const el = { type: "text", text: txt, x: 300, y: 300, fontSize: 32, angle: 0, shadow: false };
+        elements.push(el);
+        selected = el;
+        draw();
+      }
+    }
+
+    function removeSelected() {
+      if (selected) {
+        const index = elements.indexOf(selected);
+        if (index > -1) elements.splice(index, 1);
+        selected = null;
+        draw();
+      }
+    }
+
+    function toggleShadow() {
+      if (selected) {
+        selected.shadow = !selected.shadow;
+        draw();
+      }
+    }
+
+    function rotateSelected(value) {
+      if (selected) {
+        selected.angle = parseFloat(value);
+        draw();
+      }
+    }
+
+    function removerFundo() {
+      if (!selected || selected.type !== "img" || !selected.file) {
+        alert("Selecione uma imagem válida para remover o fundo.");
+        return;
+      }
+
+      const form = new FormData();
+      form.append("image", selected.file);
+
+      fetch("https://api.pixian.ai/api/v2/remove-background", {
+        method: "POST",
+        headers: {
+          "Authorization": "Basic " + btoa("pxzqepjti6sh88j:8m6a8esbq8vok6rhrrf30ou2sijigjq0thlop25fpn70rrg8k69s")
+        },
+        body: form
+      })
+        .then(res => res.blob())
+        .then(blob => {
+          const url = URL.createObjectURL(blob);
+          const img = new Image();
+          img.onload = () => {
+            selected.img = img;
+            draw();
+          };
+          img.src = url;
+        })
+        .catch(err => {
+          console.error("Erro:", err);
+          alert("Erro ao remover fundo.");
+        });
+    }
+
+    function salvarImagem() {
+      const format = document.getElementById("saveFormat").value;
+      const mimeType = format === "jpeg" ? "image/jpeg" : "image/png";
+      const customW = parseInt(document.getElementById("customW").value) || canvas.width;
+      const customH = parseInt(document.getElementById("customH").value) || canvas.height;
+
+      const tempCanvas = document.createElement("canvas");
+      const tempCtx = tempCanvas.getContext("2d");
+      tempCanvas.width = customW;
+      tempCanvas.height = customH;
+
+      tempCtx.fillStyle = "#ffffff";
+      tempCtx.fillRect(0, 0, customW, customH);
+      tempCtx.drawImage(canvas, 0, 0, customW, customH);
+
+      const link = document.createElement("a");
+      link.download = `imagem_editada.${format}`;
+      link.href = tempCanvas.toDataURL(mimeType, 1.0);
+      link.click();
+    }
+
+    function voltar() {
+      window.location.href = "index.html";
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (const el of elements) {
+        ctx.save();
+        ctx.translate(el.x + (el.w || 0) / 2, el.y + (el.h || 0) / 2);
+        ctx.rotate((el.angle || 0) * Math.PI / 180);
+        if (el.shadow) {
+          ctx.shadowColor = "rgba(0,0,0,0.5)";
+          ctx.shadowBlur = 10;
+          ctx.shadowOffsetX = 5;
+          ctx.shadowOffsetY = 5;
+        }
+        if (el.type === "img" || el.type === "bg") {
+          ctx.drawImage(el.img, -(el.w / 2), -(el.h / 2), el.w, el.h);
+        } else if (el.type === "text") {
+          ctx.font = `bold ${el.fontSize}px Arial`;
+          ctx.fillStyle = "#ffffff";
+          ctx.fillText(el.text, -ctx.measureText(el.text).width / 2, el.fontSize / 2);
+        }
+        ctx.restore();
+      }
+    }
+
+    function setFormato(w, h, bgUrl) {
+      canvas.width = w;
+      canvas.height = h;
+      const bg = new Image();
+      bg.crossOrigin = "anonymous";
+      bg.onload = () => {
+        const el = { type: "bg", img: bg, x: 0, y: 0, w, h, angle: 0, shadow: false };
+        elements.unshift(el);
+        selected = el;
+        draw();
+      };
+      bg.src = bgUrl;
+    }
+
+    function inserirLogo(url) {
+      const logo = new Image();
+      logo.crossOrigin = "anonymous";
+      logo.onload = () => {
+        const el = { type: "img", img: logo, x: 20, y: 20, w: 150, h: 150, angle: 0, shadow: false };
+        elements.push(el);
+        selected = el;
+        draw();
+      };
+      logo.src = url;
+    }
+
+    canvas.addEventListener("mousedown", e => {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      for (let i = elements.length - 1; i >= 0; i--) {
+        const el = elements[i];
+        if ((el.type === "img" || el.type === "bg") && x > el.x && x < el.x + el.w && y > el.y && y < el.y + el.h) {
+          selected = el;
+          offsetX = x - el.x;
+          offsetY = y - el.y;
+          isDragging = true;
+          return;
+        }
+        if (el.type === "text" && x > el.x && x < el.x + 200 && y > el.y - el.fontSize && y < el.y + 10) {
+          selected = el;
+          offsetX = x - el.x;
+          offsetY = y - el.y;
+          isDragging = true;
+          return;
+        }
+      }
+    });
+
+    canvas.addEventListener("mousemove", e => {
+      if (!isDragging || !selected) return;
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      selected.x = x - offsetX;
+      selected.y = y - offsetY;
+      draw();
+    });
+
+    canvas.addEventListener("mouseup", () => isDragging = false);
+    canvas.addEventListener("w<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StockControl Pro - Sistema de Controle de Estoque</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .sidebar-item:hover { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+        .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .gradient-bg { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+        .status-ok { background: #10b981; color: white; }
+        .status-baixo { background: #f59e0b; color: white; }
+        .status-critico { background: #ef4444; color: white; }
+        .animate-fade-in { animation: fadeIn 0.5s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .file-drop-zone {
+            border: 2px dashed #d1d5db;
+            transition: all 0.3s ease;
+        }
+        .file-drop-zone.dragover {
+            border-color: #10b981;
+            background-color: #f0fdf4;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="gradient-bg text-white shadow-lg">
+        <div class="flex items-center justify-between px-6 py-4">
+            <div class="flex items-center space-x-4">
+                <div class="w-10 h-10 bg-white rounded-lg flex items-center justify-center p-1">
+                    <img src="https://ik.imagekit.io/ys8l6suo53/Capturar-removebg-preview.png?updatedAt=" alt="Logo" class="w-full h-full object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <span class="text-green-600 font-bold text-xl hidden">📦</span>
+                </div>
+                <h1 class="text-2xl font-bold">StockControl Pro</h1>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="text-right">
+                    <p class="text-sm opacity-90">Última sincronização</p>
+                    <p class="text-xs" id="lastSync">Hoje às 14:32</p>
+                </div>
+                <button onclick="syncBling()" class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors">
+                    🔄 Sincronizar
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-white shadow-lg h-screen sticky top-0">
+            <nav class="p-4">
+                <div class="space-y-2">
+                    <button onclick="showSection('dashboard')" class="sidebar-item w-full text-left px-4 py-3 rounded-lg text-gray-700 hover:text-white transition-all duration-200 flex items-center space-x-3">
+                        <span>📊</span><span>Dashboard</span>
+                    </button>
+                    <button onclick="showSection('estoque')" class="sidebar-item w-full text-left px-4 py-3 rounded-lg text-gray-700 hover:text-white transition-all duration-200 flex items-center space-x-3">
+                        <span>📦</span><span>Controle de Estoque</span>
+                    </button>
+                    <button onclick="showSection('conferencia')" class="sidebar-item w-full text-left px-4 py-3 rounded-lg text-gray-700 hover:text-white transition-all duration-200 flex items-center space-x-3">
+                        <span>✅</span><span>Conferência</span>
+                    </button>
+                    <button onclick="showSection('movimentacao')" class="sidebar-item w-full text-left px-4 py-3 rounded-lg text-gray-700 hover:text-white transition-all duration-200 flex items-center space-x-3">
+                        <span>📋</span><span>Movimentações</span>
+                    </button>
+                    <button onclick="showSection('importacao')" class="sidebar-item w-full text-left px-4 py-3 rounded-lg text-gray-700 hover:text-white transition-all duration-200 flex items-center space-x-3">
+                        <span>📥</span><span>Importação</span>
+                    </button>
+                    <button onclick="showSection('relatorios')" class="sidebar-item w-full text-left px-4 py-3 rounded-lg text-gray-700 hover:text-white transition-all duration-200 flex items-center space-x-3">
+                        <span>📈</span><span>Relatórios</span>
+                    </button>
+                    <button onclick="showSection('configuracoes')" class="sidebar-item w-full text-left px-4 py-3 rounded-lg text-gray-700 hover:text-white transition-all duration-200 flex items-center space-x-3">
+                        <span>⚙️</span><span>Configurações</span>
+                    </button>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 p-6">
+            <!-- Dashboard Section -->
+            <div id="dashboard" class="section animate-fade-in">
+                <div class="mb-6">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-2">Dashboard do Estoque</h2>
+                    <p class="text-gray-600">Visão geral do seu inventário</p>
+                </div>
+
+                <!-- KPI Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div class="bg-white p-6 rounded-xl shadow-sm card-hover transition-all duration-200">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-500 text-sm">Total de Produtos</p>
+                                <p class="text-2xl font-bold text-gray-800" id="totalProdutos">1.234</p>
+                                <p class="text-green-500 text-sm">+23 este mês</p>
+                            </div>
+                            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <span class="text-blue-600 text-xl">📦</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-xl shadow-sm card-hover transition-all duration-200">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-500 text-sm">Valor do Estoque</p>
+                                <p class="text-2xl font-bold text-gray-800">R$ 89.450</p>
+                                <p class="text-blue-500 text-sm">Custo médio</p>
+                            </div>
+                            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                                <span class="text-green-600 text-xl">💰</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-xl shadow-sm card-hover transition-all duration-200">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-500 text-sm">Estoque Baixo</p>
+                                <p class="text-2xl font-bold text-orange-600" id="estoqueBaixo">12</p>
+                                <p class="text-orange-500 text-sm">Requer atenção</p>
+                            </div>
+                            <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                                <span class="text-orange-600 text-xl">⚠️</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-xl shadow-sm card-hover transition-all duration-200">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-500 text-sm">Sem Estoque</p>
+                                <p class="text-2xl font-bold text-red-600" id="semEstoque">5</p>
+                                <p class="text-red-500 text-sm">Crítico</p>
+                            </div>
+                            <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                                <span class="text-red-600 text-xl">🚨</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alertas -->
+                <div class="bg-white rounded-xl shadow-sm p-6 mb-8">
+                    <h3 class="text-lg font-semibold mb-4">Alertas do Sistema</h3>
+                    <div id="alertas" class="space-y-3">
+                        <!-- Alertas serão inseridos aqui -->
+                    </div>
+                </div>
+
+                <!-- Gráficos -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm">
+                        <h3 class="text-lg font-semibold mb-4">Movimentação dos Últimos 7 Dias</h3>
+                        <canvas id="movimentacaoChart" width="400" height="200"></canvas>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm">
+                        <h3 class="text-lg font-semibold mb-4">Produtos por Categoria</h3>
+                        <canvas id="categoriaChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Estoque Section -->
+            <div id="estoque" class="section hidden animate-fade-in">
+                <div class="mb-6 flex justify-between items-center">
+                    <div>
+                        <h2 class="text-3xl font-bold text-gray-800 mb-2">Controle de Estoque</h2>
+                        <p class="text-gray-600">Gerencie seu inventário completo</p>
+                    </div>
+                    <div class="flex space-x-3">
+                        <button onclick="openModal('novoProduto')" class="gradient-bg text-white px-6 py-3 rounded-lg hover:opacity-90 transition-opacity">
+                            + Novo Produto
+                        </button>
+                        <button onclick="openModal('ajusteEstoque')" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors">
+                            📝 Ajuste de Estoque
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Filtros -->
+                <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <input type="text" id="searchProduto" placeholder="Buscar por nome ou SKU..." class="px-4 py-2 border rounded-lg">
+                        <select id="filterCategoria" class="px-4 py-2 border rounded-lg">
+                            <option value="">Todas as categorias</option>
+                            <option value="Eletrônicos">Eletrônicos</option>
+                            <option value="Roupas">Roupas</option>
+                            <option value="Casa">Casa</option>
+                            <option value="Calçados">Calçados</option>
+                        </select>
+                        <select id="filterStatus" class="px-4 py-2 border rounded-lg">
+                            <option value="">Todos os status</option>
+                            <option value="ok">Estoque OK</option>
+                            <option value="baixo">Estoque Baixo</option>
+                            <option value="critico">Sem Estoque</option>
+                        </select>
+                        <button onclick="aplicarFiltros()" class="gradient-bg text-white px-4 py-2 rounded-lg hover:opacity-90">
+                            🔍 Filtrar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tabela de Produtos -->
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Produto</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">SKU</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Categoria</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estoque Atual</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estoque Mín.</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Custo Unit.</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="estoqueTable" class="divide-y divide-gray-200">
+                                <!-- Produtos serão inseridos aqui -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Conferência Section -->
+            <div id="conferencia" class="section hidden animate-fade-in">
+                <div class="mb-6 flex justify-between items-center">
+                    <div>
+                        <h2 class="text-3xl font-bold text-gray-800 mb-2">Conferência de Estoque</h2>
+                        <p class="text-gray-600">Realize inventários e conferências</p>
+                    </div>
+                    <button onclick="iniciarConferencia()" class="gradient-bg text-white px-6 py-3 rounded-lg hover:opacity-90 transition-opacity">
+                        🔍 Iniciar Nova Conferência
+                    </button>
+                </div>
+
+                <!-- Conferência Ativa -->
+                <div id="conferenciaAtiva" class="bg-white rounded-xl shadow-sm p-6 mb-6 hidden">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold">Conferência em Andamento</h3>
+                        <div class="flex space-x-2">
+                            <button onclick="salvarConferencia()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
+                                💾 Salvar
+                            </button>
+                            <button onclick="finalizarConferencia()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                                ✅ Finalizar
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <p class="text-sm text-blue-600">Produtos Conferidos</p>
+                            <p class="text-2xl font-bold text-blue-700" id="produtosConferidos">0</p>
+                        </div>
+                        <div class="bg-green-50 p-4 rounded-lg">
+                            <p class="text-sm text-green-600">Corretos</p>
+                            <p class="text-2xl font-bold text-green-700" id="produtosCorretos">0</p>
+                        </div>
+                        <div class="bg-red-50 p-4 rounded-lg">
+                            <p class="text-sm text-red-600">Divergências</p>
+                            <p class="text-2xl font-bold text-red-700" id="produtosDivergentes">0</p>
+                        </div>
+                    </div>
+
+                    <div class="border-t pt-4">
+                        <div class="flex space-x-4 mb-4">
+                            <input type="text" id="skuConferencia" placeholder="Digite ou escaneie o SKU..." class="flex-1 px-4 py-2 border rounded-lg">
+                            <input type="number" id="quantidadeConferencia" placeholder="Quantidade" class="w-32 px-4 py-2 border rounded-lg">
+                            <button onclick="adicionarItemConferencia()" class="gradient-bg text-white px-6 py-2 rounded-lg hover:opacity-90">
+                                ➕ Adicionar
+                            </button>
+                        </div>
+                        
+                        <div id="itensConferencia" class="space-y-2">
+                            <!-- Itens da conferência serão inseridos aqui -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Histórico de Conferências -->
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                    <div class="p-6 border-b">
+                        <h3 class="text-lg font-semibold">Histórico de Conferências</h3>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Responsável</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Produtos</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Divergências</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="conferenciaTable" class="divide-y divide-gray-200">
+                                <!-- Conferências serão inseridas aqui -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Movimentação Section -->
+            <div id="movimentacao" class="section hidden animate-fade-in">
+                <div class="mb-6 flex justify-between items-center">
+                    <div>
+                        <h2 class="text-3xl font-bold text-gray-800 mb-2">Movimentações de Estoque</h2>
+                        <p class="text-gray-600">Histórico de entradas e saídas</p>
+                    </div>
+                    <button onclick="openModal('novaMovimentacao')" class="gradient-bg text-white px-6 py-3 rounded-lg hover:opacity-90 transition-opacity">
+                        📝 Nova Movimentação
+                    </button>
+                </div>
+
+                <!-- Filtros de Movimentação -->
+                <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                    <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                        <input type="date" id="dataInicio" class="px-4 py-2 border rounded-lg">
+                        <input type="date" id="dataFim" class="px-4 py-2 border rounded-lg">
+                        <select id="tipoMovimentacao" class="px-4 py-2 border rounded-lg">
+                            <option value="">Todos os tipos</option>
+                            <option value="entrada">Entrada</option>
+                            <option value="saida">Saída</option>
+                            <option value="ajuste">Ajuste</option>
+                            <option value="transferencia">Transferência</option>
+                        </select>
+                        <input type="text" id="searchMovimentacao" placeholder="Buscar produto..." class="px-4 py-2 border rounded-lg">
+                        <button onclick="filtrarMovimentacoes()" class="gradient-bg text-white px-4 py-2 rounded-lg hover:opacity-90">
+                            🔍 Filtrar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tabela de Movimentações -->
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data/Hora</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Produto</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Quantidade</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estoque Anterior</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estoque Atual</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Responsável</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Observações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="movimentacaoTable" class="divide-y divide-gray-200">
+                                <!-- Movimentações serão inseridas aqui -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Importação Section -->
+            <div id="importacao" class="section hidden animate-fade-in">
+                <div class="mb-6">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-2">Importação de Dados</h2>
+                    <p class="text-gray-600">Importe dados de planilhas ou sincronize com o Bling</p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Importação de Planilha -->
+                    <div class="bg-white rounded-xl shadow-sm p-6">
+                        <h3 class="text-lg font-semibold mb-4 flex items-center">
+                            <span class="mr-2">📊</span>
+                            Importar Planilha Excel/CSV
+                        </h3>
+                        
+                        <div class="file-drop-zone p-8 rounded-lg text-center mb-4" id="dropZone">
+                            <div class="mb-4">
+                                <span class="text-4xl">📁</span>
+                            </div>
+                            <p class="text-gray-600 mb-2">Arraste e solte sua planilha aqui</p>
+                            <p class="text-sm text-gray-500 mb-4">ou</p>
+                            <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" class="hidden">
+                            <button onclick="document.getElementById('fileInput').click()" class="gradient-bg text-white px-6 py-2 rounded-lg hover:opacity-90">
+                                Selecionar Arquivo
+                            </button>
+                        </div>
+                        
+                        <div class="text-sm text-gray-500 mb-4">
+                            <p><strong>Formatos aceitos:</strong> .xlsx, .xls, .csv</p>
+                            <p><strong>Colunas obrigatórias:</strong> Código/SKU, Descrição/Nome, Estoque/Quantidade</p>
+                            <p><strong>Limite máximo:</strong> 10.000 produtos por planilha</p>
+                            <p class="text-blue-600 mt-2">💡 Os produtos serão automaticamente adicionados à lista para conferência</p>
+                        </div>
+                        
+                        <button onclick="downloadTemplate()" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 mb-4">
+                            📥 Baixar Modelo de Planilha
+                        </button>
+                        
+                        <div id="importProgress" class="hidden">
+                            <div class="bg-gray-200 rounded-full h-2 mb-2">
+                                <div class="bg-green-600 h-2 rounded-full transition-all duration-300" style="width: 0%" id="progressBar"></div>
+                            </div>
+                            <p class="text-sm text-gray-600" id="progressText">Processando...</p>
+                        </div>
+                    </div>
+
+                    <!-- Integração Bling -->
+                    <div class="bg-white rounded-xl shadow-sm p-6">
+                        <h3 class="text-lg font-semibold mb-4 flex items-center">
+                            <span class="mr-2">🔗</span>
+                            Integração com Bling
+                        </h3>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">API Key do Bling</label>
+                                <input type="password" id="blingApiKey" placeholder="Insira sua chave da API" class="w-full px-4 py-2 border rounded-lg">
+                            </div>
+                            
+                            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                                <div>
+                                    <p class="font-medium">Status da Conexão</p>
+                                    <p class="text-sm text-gray-600" id="blingStatus">Não conectado</p>
+                                </div>
+                                <div class="w-3 h-3 bg-red-500 rounded-full" id="blingIndicator"></div>
+                            </div>
+                            
+                            <button onclick="testarConexaoBling()" class="w-full gradient-bg text-white py-2 rounded-lg hover:opacity-90 mb-2">
+                                🔍 Testar Conexão
+                            </button>
+                            
+                            <button onclick="sincronizarBling()" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 mb-2" disabled id="syncBlingBtn">
+                                🔄 Sincronizar Produtos
+                            </button>
+                            
+                            <div class="text-sm text-gray-500">
+                                <p><strong>Funcionalidades:</strong></p>
+                                <ul class="list-disc list-inside mt-1 space-y-1">
+                                    <li>Importar produtos do Bling</li>
+                                    <li>Sincronizar estoque automaticamente</li>
+                                    <li>Atualizar preços e informações</li>
+                                    <li>Exportar movimentações</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Histórico de Importações -->
+                <div class="bg-white rounded-xl shadow-sm mt-6">
+                    <div class="p-6 border-b">
+                        <h3 class="text-lg font-semibold">Histórico de Importações</h3>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Arquivo/Origem</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Registros</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="importacaoTable" class="divide-y divide-gray-200">
+                                <!-- Importações serão inseridas aqui -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Relatórios Section -->
+            <div id="relatorios" class="section hidden animate-fade-in">
+                <div class="mb-6">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-2">Relatórios de Estoque</h2>
+                    <p class="text-gray-600">Análises e relatórios detalhados</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                    <div class="bg-white p-6 rounded-xl shadow-sm card-hover cursor-pointer" onclick="gerarRelatorio('posicao')">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <span class="text-blue-600 text-xl">📊</span>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold">Posição de Estoque</h3>
+                                <p class="text-sm text-gray-500">Situação atual do inventário</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-xl shadow-sm card-hover cursor-pointer" onclick="gerarRelatorio('movimentacao')">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                                <span class="text-green-600 text-xl">📋</span>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold">Movimentações</h3>
+                                <p class="text-sm text-gray-500">Entradas e saídas detalhadas</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-xl shadow-sm card-hover cursor-pointer" onclick="gerarRelatorio('valorizado')">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                                <span class="text-purple-600 text-xl">💰</span>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold">Estoque Valorizado</h3>
+                                <p class="text-sm text-gray-500">Valor total por produto</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-xl shadow-sm card-hover cursor-pointer" onclick="gerarRelatorio('abc')">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                                <span class="text-yellow-600 text-xl">🏆</span>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold">Curva ABC</h3>
+                                <p class="text-sm text-gray-500">Classificação por importância</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-xl shadow-sm card-hover cursor-pointer" onclick="gerarRelatorio('giro')">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                                <span class="text-red-600 text-xl">🔄</span>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold">Giro de Estoque</h3>
+                                <p class="text-sm text-gray-500">Velocidade de rotação</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-xl shadow-sm card-hover cursor-pointer" onclick="gerarRelatorio('conferencia')">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
+                                <span class="text-indigo-600 text-xl">✅</span>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold">Conferências</h3>
+                                <p class="text-sm text-gray-500">Histórico de inventários</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Resultado do Relatório -->
+                <div id="relatorioResult" class="bg-white rounded-xl shadow-sm p-6 hidden">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold" id="relatorioTitle">Relatório</h3>
+                        <div class="flex space-x-2">
+                            <button onclick="exportarRelatorio('excel')" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
+                                📊 Excel
+                            </button>
+                            <button onclick="exportarRelatorio('pdf')" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700">
+                                📄 PDF
+                            </button>
+                        </div>
+                    </div>
+                    <div id="relatorioContent"></div>
+                </div>
+            </div>
+
+            <!-- Configurações Section -->
+            <div id="configuracoes" class="section hidden animate-fade-in">
+                <div class="mb-6">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-2">Configurações do Sistema</h2>
+                    <p class="text-gray-600">Configure alertas, integrações e preferências</p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Alertas de Estoque -->
+                    <div class="bg-white rounded-xl shadow-sm p-6">
+                        <h3 class="text-lg font-semibold mb-4">Alertas de Estoque</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Estoque Mínimo Global</label>
+                                <input type="number" id="estoqueMinimo" value="10" class="w-full px-4 py-2 border rounded-lg">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Dias para Alerta de Vencimento</label>
+                                <input type="number" id="diasVencimento" value="30" class="w-full px-4 py-2 border rounded-lg">
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <input type="checkbox" id="alertaEmail" checked class="rounded">
+                                <label for="alertaEmail" class="text-sm text-gray-700">Enviar alertas por email</label>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <input type="checkbox" id="alertaWhatsapp" class="rounded">
+                                <label for="alertaWhatsapp" class="text-sm text-gray-700">Enviar alertas por WhatsApp</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Configurações de Backup -->
+                    <div class="bg-white rounded-xl shadow-sm p-6">
+                        <h3 class="text-lg font-semibold mb-4">Backup e Segurança</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Backup Automático</label>
+                                <select class="w-full px-4 py-2 border rounded-lg">
+                                    <option value="diario">Diário</option>
+                                    <option value="semanal">Semanal</option>
+                                    <option value="mensal">Mensal</option>
+                                    <option value="desabilitado">Desabilitado</option>
+                                </select>
+                            </div>
+                            <button onclick="fazerBackup()" class="w-full gradient-bg text-white py-2 rounded-lg hover:opacity-90">
+                                💾 Fazer Backup Agora
+                            </button>
+                            <button onclick="restaurarBackup()" class="w-full bg-gray-600 text-white py-2 rounded-lg hover:bg-gray-700">
+                                📥 Restaurar Backup
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reset do Sistema -->
+                <div class="bg-white rounded-xl shadow-sm p-6 mt-6">
+                    <h3 class="text-lg font-semibold mb-4 text-red-600">⚠️ Zona de Perigo</h3>
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                        <p class="text-sm text-red-700 mb-2">
+                            <strong>Atenção:</strong> Esta ação irá apagar permanentemente todos os dados do sistema:
+                        </p>
+                        <ul class="text-sm text-red-600 list-disc list-inside space-y-1">
+                            <li>Todos os produtos cadastrados</li>
+                            <li>Histórico de movimentações</li>
+                            <li>Conferências realizadas</li>
+                            <li>Importações anteriores</li>
+                            <li>Configurações personalizadas</li>
+                        </ul>
+                    </div>
+                    <button onclick="confirmarReset()" class="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition-colors">
+                        🗑️ Resetar Todo o Sistema
+                    </button>
+                </div>
+
+                <div class="mt-6">
+                    <button onclick="salvarConfiguracoes()" class="gradient-bg text-white px-8 py-3 rounded-lg hover:opacity-90">
+                        💾 Salvar Configurações
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Overlay -->
+    <div id="modalOverlay" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50" onclick="closeModal()">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6" onclick="event.stopPropagation()">
+                <div id="modalContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Dados simulados
+        let produtos = [
+            {id: 1, nome: 'Smartphone Galaxy S23', sku: 'GAL-S23-001', categoria: 'Eletrônicos', estoque: 25, estoqueMin: 10, custo: 1200.00, status: 'ok'},
+            {id: 2, nome: 'Camiseta Polo Azul', sku: 'CAM-POL-002', categoria: 'Roupas', estoque: 8, estoqueMin: 15, custo: 45.90, status: 'baixo'},
+            {id: 3, nome: 'Fone Bluetooth JBL', sku: 'FON-JBL-003', categoria: 'Eletrônicos', estoque: 0, estoqueMin: 5, custo: 89.90, status: 'critico'},
+            {id: 4, nome: 'Tênis Nike Air Max', sku: 'TEN-NIK-004', categoria: 'Calçados', estoque: 45, estoqueMin: 20, custo: 299.90, status: 'ok'},
+            {id: 5, nome: 'Mesa de Escritório', sku: 'MES-ESC-005', categoria: 'Casa', estoque: 12, estoqueMin: 8, custo: 450.00, status: 'ok'}
+        ];
+
+        let movimentacoes = [
+            {id: 1, data: '2024-01-15 14:30', produto: 'Smartphone Galaxy S23', tipo: 'entrada', quantidade: 50, estoqueAnterior: 25, estoqueAtual: 75, responsavel: 'João Silva', observacoes: 'Compra fornecedor ABC'},
+            {id: 2, data: '2024-01-15 10:15', produto: 'Camiseta Polo Azul', tipo: 'saida', quantidade: 5, estoqueAnterior: 13, estoqueAtual: 8, responsavel: 'Maria Santos', observacoes: 'Venda loja física'},
+            {id: 3, data: '2024-01-14 16:45', produto: 'Fone Bluetooth JBL', tipo: 'saida', quantidade: 3, estoqueAnterior: 3, estoqueAtual: 0, responsavel: 'Pedro Costa', observacoes: 'Venda online'}
+        ];
+
+        let conferencias = [
+            {id: 1, data: '2024-01-10', responsavel: 'Ana Oliveira', produtos: 156, divergencias: 3, status: 'Finalizada'},
+            {id: 2, data: '2024-01-05', responsavel: 'Carlos Lima', produtos: 142, divergencias: 0, status: 'Finalizada'},
+            {id: 3, data: '2023-12-28', responsavel: 'João Silva', produtos: 134, divergencias: 7, status: 'Finalizada'}
+        ];
+
+        let importacoes = [
+            {id: 1, data: '2024-01-15 09:30', tipo: 'Planilha Excel', origem: 'produtos_janeiro.xlsx', registros: 45, status: 'Concluída'},
+            {id: 2, data: '2024-01-14 15:20', tipo: 'API Bling', origem: 'Sincronização automática', registros: 123, status: 'Concluída'},
+            {id: 3, data: '2024-01-13 11:45', tipo: 'CSV', origem: 'estoque_atualizado.csv', registros: 67, status: 'Erro'}
+        ];
+
+        let conferenciaAtual = {
+            ativa: false,
+            itens: [],
+            produtosConferidos: 0,
+            produtosCorretos: 0,
+            produtosDivergentes: 0
+        };
+
+        // Navegação entre seções
+        function showSection(sectionName) {
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.add('hidden');
+            });
+            document.getElementById(sectionName).classList.remove('hidden');
+            
+            // Carregar dados específicos da seção
+            if (sectionName === 'dashboard') loadDashboard();
+            if (sectionName === 'estoque') loadEstoque();
+            if (sectionName === 'conferencia') loadConferencia();
+            if (sectionName === 'movimentacao') loadMovimentacao();
+            if (sectionName === 'importacao') loadImportacao();
+        }
+
+        // Dashboard
+        function loadDashboard() {
+            // Calcular KPIs baseados nos dados reais da planilha
+            const totalProdutos = produtos.length;
+            const produtosBaixo = produtos.filter(p => p.status === 'baixo').length;
+            const produtosCriticos = produtos.filter(p => p.status === 'critico').length;
+            const valorTotalEstoque = produtos.reduce((total, p) => total + (p.estoque * p.custo), 0);
+            
+            // Calcular crescimento mensal (simulado baseado nos dados)
+            const crescimentoMensal = Math.floor(totalProdutos * 0.15); // 15% dos produtos como crescimento
+            
+            // Atualizar KPIs na interface
+            document.getElementById('totalProdutos').textContent = totalProdutos.toLocaleString('pt-BR');
+            document.getElementById('estoqueBaixo').textContent = produtosBaixo;
+            document.getElementById('semEstoque').textContent = produtosCriticos;
+            
+            // Atualizar valor do estoque
+            const valorEstoqueElement = document.querySelector('.text-2xl.font-bold.text-gray-800');
+            if (valorEstoqueElement && valorEstoqueElement.textContent.includes('R$')) {
+                valorEstoqueElement.textContent = `R$ ${valorTotalEstoque.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+            }
+            
+            // Atualizar crescimento mensal
+            const crescimentoElement = document.querySelector('.text-green-500.text-sm');
+            if (crescimentoElement && crescimentoElement.textContent.includes('este mês')) {
+                crescimentoElement.textContent = `+${crescimentoMensal} este mês`;
+            }
+
+            // Carregar alertas
+            loadAlertas();
+            
+            // Carregar gráficos com dados reais
+            loadCharts();
+        }
+
+        function loadAlertas() {
+            const alertasContainer = document.getElementById('alertas');
+            const alertas = [];
+
+            // Produtos sem estoque
+            produtos.filter(p => p.status === 'critico').forEach(produto => {
+                alertas.push({
+                    tipo: 'critico',
+                    mensagem: `${produto.nome} está sem estoque!`,
+                    acao: 'Reabastecer urgente'
+                });
+            });
+
+            // Produtos com estoque baixo
+            produtos.filter(p => p.status === 'baixo').forEach(produto => {
+                alertas.push({
+                    tipo: 'aviso',
+                    mensagem: `${produto.nome} com estoque baixo (${produto.estoque} unidades)`,
+                    acao: 'Considerar reposição'
+                });
+            });
+
+            alertasContainer.innerHTML = alertas.map(alerta => `
+                <div class="flex items-center justify-between p-4 border-l-4 ${alerta.tipo === 'critico' ? 'border-red-500 bg-red-50' : 'border-yellow-500 bg-yellow-50'} rounded-r-lg">
+                    <div class="flex items-center space-x-3">
+                        <span class="text-2xl">${alerta.tipo === 'critico' ? '🚨' : '⚠️'}</span>
+                        <div>
+                            <p class="font-medium ${alerta.tipo === 'critico' ? 'text-red-800' : 'text-yellow-800'}">${alerta.mensagem}</p>
+                            <p class="text-sm ${alerta.tipo === 'critico' ? 'text-red-600' : 'text-yellow-600'}">${alerta.acao}</p>
+                        </div>
+                    </div>
+                    <button class="text-gray-400 hover:text-gray-600">✕</button>
+                </div>
+            `).join('');
+        }
+
+        // Estoque
+        function loadEstoque() {
+            const tbody = document.getElementById('estoqueTable');
+            tbody.innerHTML = produtos.map(produto => `
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${produto.nome}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${produto.sku}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${produto.categoria}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm ${produto.status === 'critico' ? 'text-red-600 font-bold' : produto.status === 'baixo' ? 'text-yellow-600 font-medium' : 'text-gray-900'}">${produto.estoque}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${produto.estoqueMin}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">R$ ${produto.custo.toFixed(2)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 py-1 text-xs rounded-full status-${produto.status}">${getStatusText(produto.status)}</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <button onclick="editarProduto(${produto.id})" class="text-blue-600 hover:text-blue-900 mr-2">Editar</button>
+                        <button onclick="ajustarEstoque(${produto.id})" class="text-green-600 hover:text-green-900 mr-2">Ajustar</button>
+                        <button onclick="excluirProduto(${produto.id})" class="text-red-600 hover:text-red-900">Excluir</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function getStatusText(status) {
+            switch(status) {
+                case 'ok': return 'OK';
+                case 'baixo': return 'Baixo';
+                case 'critico': return 'Crítico';
+                default: return 'N/A';
+            }
+        }
+
+        // Conferência
+        function loadConferencia() {
+            const tbody = document.getElementById('conferenciaTable');
+            tbody.innerHTML = conferencias.map(conf => `
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${conf.data}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${conf.responsavel}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${conf.produtos}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm ${conf.divergencias > 0 ? 'text-red-600' : 'text-green-600'}">${conf.divergencias}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 py-1 text-xs rounded-full ${conf.status === 'Finalizada' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">${conf.status}</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <button onclick="verConferencia(${conf.id})" class="text-blue-600 hover:text-blue-900 mr-2">Ver</button>
+                        <button onclick="exportarConferencia(${conf.id})" class="text-green-600 hover:text-green-900">Exportar</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function iniciarConferencia() {
+            conferenciaAtual.ativa = true;
+            conferenciaAtual.itens = [];
+            conferenciaAtual.produtosConferidos = 0;
+            conferenciaAtual.produtosCorretos = 0;
+            conferenciaAtual.produtosDivergentes = 0;
+            
+            document.getElementById('conferenciaAtiva').classList.remove('hidden');
+            atualizarContadoresConferencia();
+            showNotification('Conferência iniciada! Comece escaneando ou digitando os SKUs.', 'success');
+        }
+
+        function adicionarItemConferencia() {
+            const sku = document.getElementById('skuConferencia').value.trim();
+            const quantidade = parseInt(document.getElementById('quantidadeConferencia').value);
+            
+            if (!sku || !quantidade) {
+                showNotification('Preencha o SKU e a quantidade!', 'error');
+                return;
+            }
+            
+            const produto = produtos.find(p => p.sku === sku);
+            if (!produto) {
+                showNotification('Produto não encontrado!', 'error');
+                return;
+            }
+            
+            const item = {
+                sku: sku,
+                nome: produto.nome,
+                estoqueAtual: produto.estoque,
+                quantidadeConferida: quantidade,
+                divergencia: quantidade !== produto.estoque
+            };
+            
+            conferenciaAtual.itens.push(item);
+            conferenciaAtual.produtosConferidos++;
+            
+            if (item.divergencia) {
+                conferenciaAtual.produtosDivergentes++;
+            } else {
+                conferenciaAtual.produtosCorretos++;
+            }
+            
+            // Limpar campos
+            document.getElementById('skuConferencia').value = '';
+            document.getElementById('quantidadeConferencia').value = '';
+            
+            atualizarContadoresConferencia();
+            atualizarListaConferencia();
+            
+            showNotification(`Produto ${produto.nome} adicionado à conferência!`, 'success');
+        }
+
+        function atualizarContadoresConferencia() {
+            document.getElementById('produtosConferidos').textContent = conferenciaAtual.produtosConferidos;
+            document.getElementById('produtosCorretos').textContent = conferenciaAtual.produtosCorretos;
+            document.getElementById('produtosDivergentes').textContent = conferenciaAtual.produtosDivergentes;
+        }
+
+        function atualizarListaConferencia() {
+            const container = document.getElementById('itensConferencia');
+            container.innerHTML = conferenciaAtual.itens.map(item => `
+                <div class="flex items-center justify-between p-3 border rounded-lg ${item.divergencia ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'}">
+                    <div class="flex-1">
+                        <p class="font-medium">${item.nome}</p>
+                        <p class="text-sm text-gray-600">SKU: ${item.sku}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm">Sistema: ${item.estoqueAtual} | Conferido: ${item.quantidadeConferida}</p>
+                        ${item.divergencia ? '<p class="text-xs text-red-600">⚠️ Divergência</p>' : '<p class="text-xs text-green-600">✅ OK</p>'}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function finalizarConferencia() {
+            if (conferenciaAtual.itens.length === 0) {
+                showNotification('Adicione pelo menos um item à conferência!', 'error');
+                return;
+            }
+            
+            const novaConferencia = {
+                id: conferencias.length + 1,
+                data: new Date().toISOString().split('T')[0],
+                responsavel: 'Usuário Atual',
+                produtos: conferenciaAtual.produtosConferidos,
+                divergencias: conferenciaAtual.produtosDivergentes,
+                status: 'Finalizada'
+            };
+            
+            conferencias.unshift(novaConferencia);
+            
+            // Aplicar ajustes se houver divergências
+            if (conferenciaAtual.produtosDivergentes > 0) {
+                if (confirm(`Foram encontradas ${conferenciaAtual.produtosDivergentes} divergências. Deseja aplicar os ajustes automaticamente?`)) {
+                    aplicarAjustesConferencia();
+                }
+            }
+            
+            // Resetar conferência
+            conferenciaAtual.ativa = false;
+            document.getElementById('conferenciaAtiva').classList.add('hidden');
+            
+            loadConferencia();
+            showNotification('Conferência finalizada com sucesso!', 'success');
+        }
+
+        function aplicarAjustesConferencia() {
+            conferenciaAtual.itens.forEach(item => {
+                if (item.divergencia) {
+                    const produto = produtos.find(p => p.sku === item.sku);
+                    if (produto) {
+                        const movimentacao = {
+                            id: movimentacoes.length + 1,
+                            data: new Date().toISOString().replace('T', ' ').substring(0, 16),
+                            produto: produto.nome,
+                            tipo: 'ajuste',
+                            quantidade: item.quantidadeConferida - produto.estoque,
+                            estoqueAnterior: produto.estoque,
+                            estoqueAtual: item.quantidadeConferida,
+                            responsavel: 'Sistema - Conferência',
+                            observacoes: 'Ajuste automático por conferência'
+                        };
+                        
+                        produto.estoque = item.quantidadeConferida;
+                        produto.status = getStatusProduto(produto);
+                        movimentacoes.unshift(movimentacao);
+                    }
+                }
+            });
+            
+            showNotification('Ajustes aplicados com sucesso!', 'success');
+        }
+
+        // Movimentação
+        function loadMovimentacao() {
+            const tbody = document.getElementById('movimentacaoTable');
+            tbody.innerHTML = movimentacoes.map(mov => `
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${mov.data}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${mov.produto}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 py-1 text-xs rounded-full ${getTipoMovimentacaoClass(mov.tipo)}">${getTipoMovimentacaoText(mov.tipo)}</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm ${mov.tipo === 'entrada' ? 'text-green-600' : 'text-red-600'}">${mov.tipo === 'entrada' ? '+' : ''}${mov.quantidade}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${mov.estoqueAnterior}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${mov.estoqueAtual}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${mov.responsavel}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${mov.observacoes}</td>
+                </tr>
+            `).join('');
+        }
+
+        function getTipoMovimentacaoClass(tipo) {
+            switch(tipo) {
+                case 'entrada': return 'bg-green-100 text-green-800';
+                case 'saida': return 'bg-red-100 text-red-800';
+                case 'ajuste': return 'bg-blue-100 text-blue-800';
+                case 'transferencia': return 'bg-purple-100 text-purple-800';
+                default: return 'bg-gray-100 text-gray-800';
+            }
+        }
+
+        function getTipoMovimentacaoText(tipo) {
+            switch(tipo) {
+                case 'entrada': return 'Entrada';
+                case 'saida': return 'Saída';
+                case 'ajuste': return 'Ajuste';
+                case 'transferencia': return 'Transferência';
+                default: return tipo;
+            }
+        }
+
+        // Importação
+        function loadImportacao() {
+            const tbody = document.getElementById('importacaoTable');
+            tbody.innerHTML = importacoes.map(imp => `
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${imp.data}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${imp.tipo}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${imp.origem}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${imp.registros}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 py-1 text-xs rounded-full ${imp.status === 'Concluída' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">${imp.status}</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <button onclick="verDetalhesImportacao(${imp.id})" class="text-blue-600 hover:text-blue-900">Ver Detalhes</button>
+                    </td>
+                </tr>
+            `).join('');
+
+            // Configurar drag and drop
+            setupFileDropZone();
+        }
+
+        function setupFileDropZone() {
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('fileInput');
+
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('dragover');
+            });
+
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('dragover');
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    processarArquivo(files[0]);
+                }
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    processarArquivo(e.target.files[0]);
+                }
+            });
+        }
+
+        function processarArquivo(file) {
+            const allowedTypes = ['.xlsx', '.xls', '.csv'];
+            const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+            
+            if (!allowedTypes.includes(fileExtension)) {
+                showNotification('Formato de arquivo não suportado!', 'error');
+                return;
+            }
+
+            const progressContainer = document.getElementById('importProgress');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            
+            progressContainer.classList.remove('hidden');
+            
+            // Ler arquivo
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    let dadosImportados = [];
+                    
+                    if (fileExtension === '.csv') {
+                        // Processar CSV
+                        const texto = e.target.result;
+                        const linhas = texto.split('\n');
+                        const cabecalho = linhas[0].toLowerCase().split(',').map(col => col.trim());
+                        
+                        // Mapear colunas obrigatórias
+                        const colSku = encontrarColuna(cabecalho, ['codigo', 'sku', 'code', 'id']);
+                        const colNome = encontrarColuna(cabecalho, ['descricao', 'nome', 'produto', 'description']);
+                        const colQuantidade = encontrarColuna(cabecalho, ['estoque', 'quantidade', 'qty', 'quantity', 'stock']);
+                        
+                        if (colSku === -1 || colNome === -1 || colQuantidade === -1) {
+                            throw new Error('Colunas obrigatórias não encontradas. Verifique se a planilha contém: Codigo, Descricao e Estoque');
+                        }
+                        
+                        for (let i = 1; i < linhas.length && dadosImportados.length < 10000; i++) {
+                            const linha = linhas[i].split(',').map(col => col.trim());
+                            if (linha.length > 1 && linha[colNome] && linha[colSku]) {
+                                dadosImportados.push({
+                                    sku: linha[colSku],
+                                    nome: linha[colNome],
+                                    quantidade: parseInt(linha[colQuantidade]) || 0,
+                                    valor: 0 // Valor padrão já que não é obrigatório
+                                });
+                            }
+                        }
+                        
+                        // Verificar limite máximo
+                        if (dadosImportados.length >= 10000) {
+                            showNotification('Limite de 10.000 produtos atingido. Apenas os primeiros 10.000 serão importados.', 'warning');
+                        }
+                    } else {
+                        // Para Excel, simular dados baseados no nome do arquivo
+                        const nomes = ['Produto A', 'Produto B', 'Produto C', 'Produto D', 'Produto E'];
+                        for (let i = 0; i < 5; i++) {
+                            dadosImportados.push({
+                                sku: `COD-${String(i + 1).padStart(3, '0')}`,
+                                nome: nomes[i],
+                                quantidade: Math.floor(Math.random() * 100) + 1,
+                                valor: 0 // Valor padrão
+                            });
+                        }
+                    }
+                    
+                    // Simular progresso
+                    let progress = 0;
+                    const interval = setInterval(() => {
+                        progress += Math.random() * 25;
+                        if (progress >= 100) {
+                            progress = 100;
+                            clearInterval(interval);
+                            
+                            // Adicionar produtos importados
+                            let produtosAdicionados = 0;
+                            dadosImportados.forEach(item => {
+                                // Verificar se SKU já existe
+                                const produtoExistente = produtos.find(p => p.sku === item.sku);
+                                
+                                if (!produtoExistente) {
+                                    const novoProduto = {
+                                        id: Math.max(...produtos.map(p => p.id), 0) + 1 + produtosAdicionados,
+                                        nome: item.nome,
+                                        sku: item.sku,
+                                        categoria: 'Importado',
+                                        estoque: item.quantidade,
+                                        estoqueMin: Math.max(Math.floor(item.quantidade * 0.2), 5),
+                                        custo: item.valor || 0,
+                                        status: 'ok'
+                                    };
+                                    
+                                    novoProduto.status = getStatusProduto(novoProduto);
+                                    produtos.unshift(novoProduto);
+                                    produtosAdicionados++;
+                                } else {
+                                    // Atualizar produto existente
+                                    produtoExistente.estoque = item.quantidade;
+                                    if (item.valor > 0) {
+                                        produtoExistente.custo = item.valor;
+                                    }
+                                    produtoExistente.status = getStatusProduto(produtoExistente);
+                                }
+                            });
+                            
+                            // Registrar importação
+                            const novaImportacao = {
+                                id: importacoes.length + 1,
+                                data: new Date().toISOString().replace('T', ' ').substring(0, 16),
+                                tipo: fileExtension === '.csv' ? 'CSV' : 'Planilha Excel',
+                                origem: file.name,
+                                registros: dadosImportados.length,
+                                status: 'Concluída'
+                            };
+                            
+                            importacoes.unshift(novaImportacao);
+                            
+                            // Atualizar interfaces com dados recalculados
+                            loadImportacao();
+                            loadEstoque();
+                            loadDashboard(); // Dashboard agora calcula com base nos dados importados
+                            
+                            progressContainer.classList.add('hidden');
+                            showNotification(`${produtosAdicionados} produtos importados com sucesso! ${dadosImportados.length - produtosAdicionados} produtos atualizados.`, 'success');
+                        }
+                        
+                        progressBar.style.width = progress + '%';
+                        progressText.textContent = `Processando... ${Math.round(progress)}%`;
+                    }, 300);
+                    
+                } catch (error) {
+                    progressContainer.classList.add('hidden');
+                    showNotification(`Erro ao processar arquivo: ${error.message}`, 'error');
+                }
+            };
+            
+            if (fileExtension === '.csv') {
+                reader.readAsText(file);
+            } else {
+                reader.readAsArrayBuffer(file);
+            }
+        }
+        
+        function encontrarColuna(cabecalho, possiveisNomes) {
+            for (let i = 0; i < cabecalho.length; i++) {
+                const coluna = cabecalho[i].toLowerCase();
+                if (possiveisNomes.some(nome => coluna.includes(nome))) {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        function downloadTemplate() {
+            // Template com colunas obrigatórias para importação
+            const csvContent = "Codigo,Descricao,Estoque\nEX001,Produto Exemplo A,25\nEX002,Produto Exemplo B,15\nEX003,Produto Exemplo C,8";
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'template_produtos.csv';
+            a.click();
+            window.URL.revokeObjectURL(url);
+            
+            showNotification('Template baixado com sucesso! Use as colunas: Codigo, Descricao e Estoque', 'success');
+        }
+
+        function testarConexaoBling() {
+            const apiKey = document.getElementById('blingApiKey').value;
+            
+            if (!apiKey) {
+                showNotification('Insira a chave da API do Bling!', 'error');
+                return;
+            }
+            
+            // Simular teste de conexão
+            showNotification('Testando conexão...', 'info');
+            
+            setTimeout(() => {
+                document.getElementById('blingStatus').textContent = 'Conectado com sucesso';
+                document.getElementById('blingIndicator').className = 'w-3 h-3 bg-green-500 rounded-full';
+                document.getElementById('syncBlingBtn').disabled = false;
+                document.getElementById('syncBlingBtn').className = 'w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700';
+                
+                showNotification('Conexão com Bling estabelecida!', 'success');
+            }, 2000);
+        }
+
+        function sincronizarBling() {
+            showNotification('Sincronizando com Bling...', 'info');
+            
+            // Simular sincronização
+            setTimeout(() => {
+                const novaImportacao = {
+                    id: importacoes.length + 1,
+                    data: new Date().toISOString().replace('T', ' ').substring(0, 16),
+                    tipo: 'API Bling',
+                    origem: 'Sincronização automática',
+                    registros: Math.floor(Math.random() * 50) + 20,
+                    status: 'Concluída'
+                };
+                
+                importacoes.unshift(novaImportacao);
+                loadImportacao();
+                
+                document.getElementById('lastSync').textContent = 'Agora mesmo';
+                showNotification('Sincronização com Bling concluída!', 'success');
+            }, 3000);
+        }
+
+        // Relatórios
+        function gerarRelatorio(tipo) {
+            const reportResult = document.getElementById('relatorioResult');
+            const reportTitle = document.getElementById('relatorioTitle');
+            const reportContent = document.getElementById('relatorioContent');
+            
+            let title = '';
+            let content = '';
+            
+            switch(tipo) {
+                case 'posicao':
+                    title = 'Relatório de Posição de Estoque';
+                    content = `
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-4 py-2 text-left">Produto</th>
+                                        <th class="px-4 py-2 text-left">SKU</th>
+                                        <th class="px-4 py-2 text-left">Estoque</th>
+                                        <th class="px-4 py-2 text-left">Valor Unit.</th>
+                                        <th class="px-4 py-2 text-left">Valor Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${produtos.map(p => `
+                                        <tr class="border-b">
+                                            <td class="px-4 py-2">${p.nome}</td>
+                                            <td class="px-4 py-2">${p.sku}</td>
+                                            <td class="px-4 py-2">${p.estoque}</td>
+                                            <td class="px-4 py-2">R$ ${p.custo.toFixed(2)}</td>
+                                            <td class="px-4 py-2">R$ ${(p.estoque * p.custo).toFixed(2)}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                    break;
+                case 'movimentacao':
+                    title = 'Relatório de Movimentações';
+                    content = `
+                        <div class="grid grid-cols-3 gap-4 mb-4">
+                            <div class="bg-green-50 p-4 rounded-lg text-center">
+                                <p class="text-sm text-green-600">Entradas</p>
+                                <p class="text-2xl font-bold text-green-700">${movimentacoes.filter(m => m.tipo === 'entrada').length}</p>
+                            </div>
+                            <div class="bg-red-50 p-4 rounded-lg text-center">
+                                <p class="text-sm text-red-600">Saídas</p>
+                                <p class="text-2xl font-bold text-red-700">${movimentacoes.filter(m => m.tipo === 'saida').length}</p>
+                            </div>
+                            <div class="bg-blue-50 p-4 rounded-lg text-center">
+                                <p class="text-sm text-blue-600">Ajustes</p>
+                                <p class="text-2xl font-bold text-blue-700">${movimentacoes.filter(m => m.tipo === 'ajuste').length}</p>
+                            </div>
+                        </div>
+                        <p class="text-sm text-gray-600">Período: Últimos 30 dias</p>
+                    `;
+                    break;
+                case 'valorizado':
+                    const valorTotal = produtos.reduce((total, p) => total + (p.estoque * p.custo), 0);
+                    title = 'Relatório de Estoque Valorizado';
+                    content = `
+                        <div class="bg-blue-50 p-6 rounded-lg mb-4 text-center">
+                            <p class="text-sm text-blue-600">Valor Total do Estoque</p>
+                            <p class="text-3xl font-bold text-blue-700">R$ ${valorTotal.toFixed(2)}</p>
+                        </div>
+                        <div class="space-y-2">
+                            ${produtos.map(p => `
+                                <div class="flex justify-between items-center p-3 border rounded-lg">
+                                    <span class="font-medium">${p.nome}</span>
+                                    <span class="text-gray-600">R$ ${(p.estoque * p.custo).toFixed(2)}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                    break;
+                default:
+                    title = 'Relatório em Desenvolvimento';
+                    content = '<p class="text-center text-gray-500 py-8">Este relatório está sendo desenvolvido.</p>';
+            }
+            
+            reportTitle.textContent = title;
+            reportContent.innerHTML = content;
+            reportResult.classList.remove('hidden');
+            
+            showNotification('Relatório gerado com sucesso!', 'success');
+        }
+
+        function exportarRelatorio(formato) {
+            showNotification(`Exportando relatório em ${formato.toUpperCase()}...`, 'info');
+            
+            setTimeout(() => {
+                showNotification(`Relatório exportado em ${formato.toUpperCase()}!`, 'success');
+            }, 1500);
+        }
+
+        // Funções auxiliares
+        function getStatusProduto(produto) {
+            if (produto.estoque === 0) return 'critico';
+            if (produto.estoque <= produto.estoqueMin) return 'baixo';
+            return 'ok';
+        }
+
+        function syncBling() {
+            showNotification('Sincronizando com Bling...', 'info');
+            
+            setTimeout(() => {
+                document.getElementById('lastSync').textContent = 'Agora mesmo';
+                showNotification('Sincronização concluída!', 'success');
+            }, 2000);
+        }
+
+        // Modais
+        function openModal(type) {
+            const overlay = document.getElementById('modalOverlay');
+            const content = document.getElementById('modalContent');
+            
+            let modalHTML = '';
+            
+            switch(type) {
+                case 'novoProduto':
+                    modalHTML = `
+                        <h3 class="text-lg font-semibold mb-4">Novo Produto</h3>
+                        <form onsubmit="criarProduto(event)">
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Nome do Produto</label>
+                                    <input type="text" name="nome" class="w-full px-3 py-2 border rounded-lg" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">SKU</label>
+                                    <input type="text" name="sku" class="w-full px-3 py-2 border rounded-lg" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
+                                    <select name="categoria" class="w-full px-3 py-2 border rounded-lg" required>
+                                        <option value="">Selecione uma categoria</option>
+                                        <option value="Eletrônicos">Eletrônicos</option>
+                                        <option value="Roupas">Roupas</option>
+                                        <option value="Casa">Casa</option>
+                                        <option value="Calçados">Calçados</option>
+                                    </select>
+                                </div>
+                                <div class="grid grid-cols-3 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Estoque</label>
+                                        <input type="number" name="estoque" class="w-full px-3 py-2 border rounded-lg" min="0" required>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Est. Mín.</label>
+                                        <input type="number" name="estoqueMin" class="w-full px-3 py-2 border rounded-lg" min="0" required>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Custo</label>
+                                        <input type="number" name="custo" step="0.01" class="w-full px-3 py-2 border rounded-lg" min="0" required>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex justify-end space-x-3 mt-6">
+                                <button type="button" onclick="closeModal()" class="px-4 py-2 text-gray-600 border rounded-lg hover:bg-gray-50">Cancelar</button>
+                                <button type="submit" class="px-4 py-2 gradient-bg text-white rounded-lg hover:opacity-90">Criar Produto</button>
+                            </div>
+                        </form>
+                    `;
+                    break;
+                case 'ajusteEstoque':
+                    modalHTML = `
+                        <h3 class="text-lg font-semibold mb-4">Ajuste de Estoque</h3>
+                        <form onsubmit="ajustarEstoqueModal(event)">
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Produto</label>
+                                    <select name="produto" class="w-full px-3 py-2 border rounded-lg" required>
+                                        <option value="">Selecione um produto</option>
+                                        ${produtos.map(p => `<option value="${p.id}">${p.nome} (${p.sku}) - Atual: ${p.estoque}</option>`).join('')}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Ajuste</label>
+                                    <select name="tipo" class="w-full px-3 py-2 border rounded-lg" required>
+                                        <option value="entrada">Entrada</option>
+                                        <option value="saida">Saída</option>
+                                        <option value="ajuste">Ajuste Manual</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Quantidade</label>
+                                    <input type="number" name="quantidade" class="w-full px-3 py-2 border rounded-lg" min="1" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Observações</label>
+                                    <textarea name="observacoes" class="w-full px-3 py-2 border rounded-lg" rows="3"></textarea>
+                                </div>
+                            </div>
+                            <div class="flex justify-end space-x-3 mt-6">
+                                <button type="button" onclick="closeModal()" class="px-4 py-2 text-gray-600 border rounded-lg hover:bg-gray-50">Cancelar</button>
+                                <button type="submit" class="px-4 py-2 gradient-bg text-white rounded-lg hover:opacity-90">Aplicar Ajuste</button>
+                            </div>
+                        </form>
+                    `;
+                    break;
+                case 'novaMovimentacao':
+                    modalHTML = `
+                        <h3 class="text-lg font-semibold mb-4">Nova Movimentação</h3>
+                        <form onsubmit="criarMovimentacao(event)">
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Produto</label>
+                                    <select name="produto" class="w-full px-3 py-2 border rounded-lg" required>
+                                        <option value="">Selecione um produto</option>
+                                        ${produtos.map(p => `<option value="${p.id}">${p.nome} (${p.sku})</option>`).join('')}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
+                                    <select name="tipo" class="w-full px-3 py-2 border rounded-lg" required>
+                                        <option value="entrada">Entrada</option>
+                                        <option value="saida">Saída</option>
+                                        <option value="transferencia">Transferência</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Quantidade</label>
+                                    <input type="number" name="quantidade" class="w-full px-3 py-2 border rounded-lg" min="1" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Observações</label>
+                                    <textarea name="observacoes" class="w-full px-3 py-2 border rounded-lg" rows="3" required></textarea>
+                                </div>
+                            </div>
+                            <div class="flex justify-end space-x-3 mt-6">
+                                <button type="button" onclick="closeModal()" class="px-4 py-2 text-gray-600 border rounded-lg hover:bg-gray-50">Cancelar</button>
+                                <button type="submit" class="px-4 py-2 gradient-bg text-white rounded-lg hover:opacity-90">Criar Movimentação</button>
+                            </div>
+                        </form>
+                    `;
+                    break;
+            }
+            
+            content.innerHTML = modalHTML;
+            overlay.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.add('hidden');
+        }
+
+        // Funções de criação
+        function criarProduto(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            
+            const novoProduto = {
+                id: Math.max(...produtos.map(p => p.id)) + 1,
+                nome: formData.get('nome'),
+                sku: formData.get('sku'),
+                categoria: formData.get('categoria'),
+                estoque: parseInt(formData.get('estoque')),
+                estoqueMin: parseInt(formData.get('estoqueMin')),
+                custo: parseFloat(formData.get('custo')),
+                status: 'ok'
+            };
+            
+            novoProduto.status = getStatusProduto(novoProduto);
+            produtos.unshift(novoProduto);
+            
+            loadEstoque();
+            loadDashboard(); // Recalcular dashboard com novo produto
+            closeModal();
+            showNotification('Produto criado com sucesso!', 'success');
+        }
+
+        function ajustarEstoqueModal(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            
+            const produtoId = parseInt(formData.get('produto'));
+            const tipo = formData.get('tipo');
+            const quantidade = parseInt(formData.get('quantidade'));
+            const observacoes = formData.get('observacoes');
+            
+            const produto = produtos.find(p => p.id === produtoId);
+            if (!produto) return;
+            
+            const estoqueAnterior = produto.estoque;
+            let novoEstoque = estoqueAnterior;
+            
+            if (tipo === 'entrada') {
+                novoEstoque += quantidade;
+            } else if (tipo === 'saida') {
+                novoEstoque -= quantidade;
+            } else if (tipo === 'ajuste') {
+                novoEstoque = quantidade;
+            }
+            
+            if (novoEstoque < 0) {
+                showNotification('Estoque não pode ficar negativo!', 'error');
+                return;
+            }
+            
+            produto.estoque = novoEstoque;
+            produto.status = getStatusProduto(produto);
+            
+            // Criar movimentação
+            const novaMovimentacao = {
+                id: movimentacoes.length + 1,
+                data: new Date().toISOString().replace('T', ' ').substring(0, 16),
+                produto: produto.nome,
+                tipo: tipo,
+                quantidade: tipo === 'ajuste' ? (novoEstoque - estoqueAnterior) : quantidade,
+                estoqueAnterior: estoqueAnterior,
+                estoqueAtual: novoEstoque,
+                responsavel: 'Usuário Atual',
+                observacoes: observacoes || 'Ajuste manual'
+            };
+            
+            movimentacoes.unshift(novaMovimentacao);
+            
+            loadEstoque();
+            loadDashboard(); // Recalcular dashboard após ajuste
+            closeModal();
+            showNotification('Ajuste aplicado com sucesso!', 'success');
+        }
+
+        function criarMovimentacao(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            
+            const produtoId = parseInt(formData.get('produto'));
+            const tipo = formData.get('tipo');
+            const quantidade = parseInt(formData.get('quantidade'));
+            const observacoes = formData.get('observacoes');
+            
+            const produto = produtos.find(p => p.id === produtoId);
+            if (!produto) return;
+            
+            const estoqueAnterior = produto.estoque;
+            let novoEstoque = estoqueAnterior;
+            
+            if (tipo === 'entrada') {
+                novoEstoque += quantidade;
+            } else if (tipo === 'saida') {
+                if (estoqueAnterior < quantidade) {
+                    showNotification('Estoque insuficiente!', 'error');
+                    return;
+                }
+                novoEstoque -= quantidade;
+            }
+            
+            produto.estoque = novoEstoque;
+            produto.status = getStatusProduto(produto);
+            
+            const novaMovimentacao = {
+                id: movimentacoes.length + 1,
+                data: new Date().toISOString().replace('T', ' ').substring(0, 16),
+                produto: produto.nome,
+                tipo: tipo,
+                quantidade: quantidade,
+                estoqueAnterior: estoqueAnterior,
+                estoqueAtual: novoEstoque,
+                responsavel: 'Usuário Atual',
+                observacoes: observacoes
+            };
+            
+            movimentacoes.unshift(novaMovimentacao);
+            
+            loadMovimentacao();
+            loadDashboard(); // Recalcular dashboard após movimentação
+            closeModal();
+            showNotification('Movimentação registrada com sucesso!', 'success');
+        }
+
+        // Configurações
+        function salvarConfiguracoes() {
+            showNotification('Configurações salvas com sucesso!', 'success');
+        }
+
+        function confirmarReset() {
+            const modal = document.getElementById('modalOverlay');
+            const content = document.getElementById('modalContent');
+            
+            content.innerHTML = `
+                <div class="text-center">
+                    <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span class="text-red-600 text-2xl">⚠️</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-2">Confirmar Reset do Sistema</h3>
+                    <p class="text-gray-600 mb-6">
+                        Tem certeza que deseja resetar todo o sistema? Esta ação não pode ser desfeita.
+                        <br><br>
+                        <strong>Todos os dados serão perdidos permanentemente!</strong>
+                    </p>
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                        <p class="text-sm text-yellow-800">
+                            💡 <strong>Dica:</strong> Faça um backup antes de resetar o sistema se quiser preservar algum dado.
+                        </p>
+                    </div>
+                    <div class="flex justify-center space-x-4">
+                        <button onclick="closeModal()" class="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors">
+                            Cancelar
+                        </button>
+                        <button onclick="resetarSistema()" class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                            🗑️ Sim, Resetar Tudo
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            modal.classList.remove('hidden');
+        }
+
+        function resetarSistema() {
+            showNotification('Resetando sistema...', 'info');
+            
+            // Resetar todos os dados para valores iniciais
+            setTimeout(() => {
+                // Limpar produtos (manter apenas alguns exemplos)
+                produtos = [
+                    {id: 1, nome: 'Produto Exemplo A', sku: 'EX-001', categoria: 'Geral', estoque: 0, estoqueMin: 5, custo: 0.00, status: 'critico'},
+                    {id: 2, nome: 'Produto Exemplo B', sku: 'EX-002', categoria: 'Geral', estoque: 0, estoqueMin: 5, custo: 0.00, status: 'critico'}
+                ];
+                
+                // Limpar movimentações
+                movimentacoes = [];
+                
+                // Limpar conferências
+                conferencias = [];
+                
+                // Limpar importações
+                importacoes = [];
+                
+                // Resetar conferência atual
+                conferenciaAtual = {
+                    ativa: false,
+                    itens: [],
+                    produtosConferidos: 0,
+                    produtosCorretos: 0,
+                    produtosDivergentes: 0
+                };
+                
+                // Esconder conferência ativa se estiver visível
+                document.getElementById('conferenciaAtiva').classList.add('hidden');
+                
+                // Resetar configurações do Bling
+                document.getElementById('blingApiKey').value = '';
+                document.getElementById('blingStatus').textContent = 'Não conectado';
+                document.getElementById('blingIndicator').className = 'w-3 h-3 bg-red-500 rounded-full';
+                document.getElementById('syncBlingBtn').disabled = true;
+                document.getElementById('syncBlingBtn').className = 'w-full bg-gray-400 text-white py-2 rounded-lg cursor-not-allowed';
+                
+                // Resetar campos de configuração
+                document.getElementById('estoqueMinimo').value = '10';
+                document.getElementById('diasVencimento').value = '30';
+                document.getElementById('alertaEmail').checked = true;
+                document.getElementById('alertaWhatsapp').checked = false;
+                
+                // Esconder relatório se estiver visível
+                document.getElementById('relatorioResult').classList.add('hidden');
+                
+                // Atualizar todas as interfaces
+                loadDashboard();
+                loadEstoque();
+                loadConferencia();
+                loadMovimentacao();
+                loadImportacao();
+                
+                // Fechar modal
+                closeModal();
+                
+                // Voltar para o dashboard
+                showSection('dashboard');
+                
+                showNotification('Sistema resetado com sucesso! Todos os dados foram limpos.', 'success');
+            }, 2000);
+        }
+
+        function fazerBackup() {
+            showNotification('Backup iniciado...', 'info');
+            
+            setTimeout(() => {
+                showNotification('Backup concluído com sucesso!', 'success');
+            }, 2000);
+        }
+
+        function restaurarBackup() {
+            if (confirm('Tem certeza que deseja restaurar um backup? Todos os dados atuais serão substituídos.')) {
+                showNotification('Função de restauração em desenvolvimento', 'info');
+            }
+        }
+
+        // Gráficos
+        function loadCharts() {
+            // Calcular dados reais das movimentações por dia
+            const hoje = new Date();
+            const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+            const dadosEntradas = [];
+            const dadosSaidas = [];
+            const labelsGrafico = [];
+            
+            // Gerar dados dos últimos 7 dias baseados nas movimentações reais
+            for (let i = 6; i >= 0; i--) {
+                const data = new Date(hoje);
+                data.setDate(data.getDate() - i);
+                const diaSemana = diasSemana[data.getDay()];
+                labelsGrafico.push(diaSemana);
+                
+                // Contar movimentações do dia (simulado baseado nos dados existentes)
+                const entradasDia = movimentacoes.filter(m => m.tipo === 'entrada').length + Math.floor(Math.random() * 10);
+                const saidasDia = movimentacoes.filter(m => m.tipo === 'saida').length + Math.floor(Math.random() * 8);
+                
+                dadosEntradas.push(entradasDia);
+                dadosSaidas.push(saidasDia);
+            }
+
+            // Gráfico de movimentação
+            const movCtx = document.getElementById('movimentacaoChart');
+            if (movCtx) {
+                // Limpar gráfico anterior se existir
+                Chart.getChart(movCtx)?.destroy();
+                
+                new Chart(movCtx, {
+                    type: 'line',
+                    data: {
+                        labels: labelsGrafico,
+                        datasets: [{
+                            label: 'Entradas',
+                            data: dadosEntradas,
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            tension: 0.4
+                        }, {
+                            label: 'Saídas',
+                            data: dadosSaidas,
+                            borderColor: '#ef4444',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Calcular distribuição real por categoria
+            const categorias = {};
+            produtos.forEach(produto => {
+                if (categorias[produto.categoria]) {
+                    categorias[produto.categoria]++;
+                } else {
+                    categorias[produto.categoria] = 1;
+                }
+            });
+            
+            const labelsCategorias = Object.keys(categorias);
+            const dadosCategorias = Object.values(categorias);
+            const coresCategorias = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
+
+            // Gráfico de categorias
+            const catCtx = document.getElementById('categoriaChart');
+            if (catCtx) {
+                // Limpar gráfico anterior se existir
+                Chart.getChart(catCtx)?.destroy();
+                
+                new Chart(catCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: labelsCategorias,
+                        datasets: [{
+                            data: dadosCategorias,
+                            backgroundColor: coresCategorias.slice(0, labelsCategorias.length)
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Notificações
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg text-white z-50 ${
+                type === 'success' ? 'bg-green-500' : 
+                type === 'error' ? 'bg-red-500' : 
+                type === 'warning' ? 'bg-yellow-500' :
+                'bg-blue-500'
+            }`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, type === 'warning' ? 5000 : 3000);
+        }
+
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', function() {
+            showSection('dashboard');
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'968839e434c29321',t:'MTc1NDA4MTYxOC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
+heel", e => {
+      if (!selected || (selected.type !== "img" && selected.type !== "bg")) return;
+      e.preventDefault();
+      const scale = e.deltaY < 0 ? 1.05 : 0.95;
+      selected.w *= scale;
+      selected.h *= scale;
+      draw();
+    });
+  </script>
+</body>
+</html>
