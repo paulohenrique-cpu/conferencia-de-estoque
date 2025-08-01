@@ -25,6 +25,171 @@
             border-color: #10b981;
             background-color: #f0fdf4;
         }
+        
+        /* Loading States */
+        .loading-skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        
+        .pulse-dot {
+            animation: pulse-dot 1.4s infinite ease-in-out;
+        }
+        .pulse-dot:nth-child(2) { animation-delay: 0.2s; }
+        .pulse-dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes pulse-dot {
+            0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+        
+        /* Offline Game Styles */
+        .offline-game {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            z-index: 9999;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .game-container {
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            padding: 20px;
+        }
+        
+        .game-board {
+            width: 300px;
+            height: 300px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            margin: 20px auto;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+        
+        .snake-pixel, .food-pixel {
+            position: absolute;
+            width: 15px;
+            height: 15px;
+            border-radius: 2px;
+        }
+        
+        .snake-pixel {
+            background: #10b981;
+            box-shadow: 0 0 5px rgba(16, 185, 129, 0.5);
+        }
+        
+        .food-pixel {
+            background: #ef4444;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.8);
+            animation: food-glow 1s infinite alternate;
+        }
+        
+        @keyframes food-glow {
+            from { transform: scale(1); }
+            to { transform: scale(1.1); }
+        }
+        
+        .game-controls {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            max-width: 200px;
+            margin: 20px auto;
+        }
+        
+        .control-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .control-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.05);
+        }
+        
+        .control-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .game-score {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 10px 0;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .game-status {
+            font-size: 16px;
+            margin: 10px 0;
+            opacity: 0.9;
+        }
+        
+        .connection-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 25px;
+            font-size: 14px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .online { background: rgba(16, 185, 129, 0.9); }
+        .offline { background: rgba(239, 68, 68, 0.9); }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .game-board {
+                width: 280px;
+                height: 280px;
+            }
+            
+            .control-btn {
+                padding: 12px;
+                font-size: 16px;
+            }
+            
+            .game-score {
+                font-size: 20px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .game-board {
+                width: 250px;
+                height: 250px;
+            }
+            
+            .snake-pixel, .food-pixel {
+                width: 12px;
+                height: 12px;
+            }
+        }
     </style>
 </head>
 <body class="bg-gray-50">
@@ -49,6 +214,46 @@
             </div>
         </div>
     </header>
+
+    <!-- Connection Status -->
+    <div id="connectionStatus" class="connection-status online">
+        🟢 Online
+    </div>
+
+    <!-- Offline Game -->
+    <div id="offlineGame" class="offline-game">
+        <div class="game-container">
+            <h1 style="font-size: 28px; margin-bottom: 10px;">🐍 Snake Game</h1>
+            <p class="game-status">Sem conexão? Relaxe e jogue um pouco!</p>
+            
+            <div class="game-score">
+                Pontuação: <span id="gameScore">0</span>
+            </div>
+            
+            <div id="gameBoard" class="game-board"></div>
+            
+            <div class="game-controls">
+                <div></div>
+                <button class="control-btn" onclick="changeDirection('up')">↑</button>
+                <div></div>
+                <button class="control-btn" onclick="changeDirection('left')">←</button>
+                <button class="control-btn" onclick="toggleGame()" id="playBtn">▶️</button>
+                <button class="control-btn" onclick="changeDirection('right')">→</button>
+                <div></div>
+                <button class="control-btn" onclick="changeDirection('down')">↓</button>
+                <div></div>
+            </div>
+            
+            <div class="game-status">
+                <p>Use as setas ou toque nos botões para jogar</p>
+                <p style="font-size: 14px; opacity: 0.8;">Pressione ESC para voltar quando a conexão retornar</p>
+            </div>
+            
+            <button onclick="hideOfflineGame()" class="control-btn" style="margin-top: 20px; background: rgba(255,255,255,0.3);">
+                🔙 Voltar ao Sistema
+            </button>
+        </div>
+    </div>
 
     <div class="flex">
         <!-- Sidebar -->
@@ -89,8 +294,65 @@
                     <p class="text-gray-600">Visão geral do seu inventário</p>
                 </div>
 
+                <!-- Loading State -->
+                <div id="dashboardLoading" class="hidden">
+                    <div class="text-center py-12">
+                        <div class="inline-flex items-center space-x-2 text-blue-600 text-lg">
+                            <div class="w-3 h-3 bg-blue-600 rounded-full pulse-dot"></div>
+                            <div class="w-3 h-3 bg-blue-600 rounded-full pulse-dot"></div>
+                            <div class="w-3 h-3 bg-blue-600 rounded-full pulse-dot"></div>
+                            <span class="ml-3">Processando dados da planilha...</span>
+                        </div>
+                        <p class="text-gray-500 mt-2">Aguarde enquanto calculamos as informações do seu estoque</p>
+                    </div>
+                    
+                    <!-- Loading Skeleton Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        <div class="bg-white p-6 rounded-xl shadow-sm">
+                            <div class="flex items-center justify-between">
+                                <div class="flex-1">
+                                    <div class="h-4 bg-gray-200 rounded loading-skeleton mb-2"></div>
+                                    <div class="h-8 bg-gray-200 rounded loading-skeleton mb-2"></div>
+                                    <div class="h-3 bg-gray-200 rounded loading-skeleton w-20"></div>
+                                </div>
+                                <div class="w-12 h-12 bg-gray-200 rounded-lg loading-skeleton"></div>
+                            </div>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-sm">
+                            <div class="flex items-center justify-between">
+                                <div class="flex-1">
+                                    <div class="h-4 bg-gray-200 rounded loading-skeleton mb-2"></div>
+                                    <div class="h-8 bg-gray-200 rounded loading-skeleton mb-2"></div>
+                                    <div class="h-3 bg-gray-200 rounded loading-skeleton w-20"></div>
+                                </div>
+                                <div class="w-12 h-12 bg-gray-200 rounded-lg loading-skeleton"></div>
+                            </div>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-sm">
+                            <div class="flex items-center justify-between">
+                                <div class="flex-1">
+                                    <div class="h-4 bg-gray-200 rounded loading-skeleton mb-2"></div>
+                                    <div class="h-8 bg-gray-200 rounded loading-skeleton mb-2"></div>
+                                    <div class="h-3 bg-gray-200 rounded loading-skeleton w-20"></div>
+                                </div>
+                                <div class="w-12 h-12 bg-gray-200 rounded-lg loading-skeleton"></div>
+                            </div>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-sm">
+                            <div class="flex items-center justify-between">
+                                <div class="flex-1">
+                                    <div class="h-4 bg-gray-200 rounded loading-skeleton mb-2"></div>
+                                    <div class="h-8 bg-gray-200 rounded loading-skeleton mb-2"></div>
+                                    <div class="h-3 bg-gray-200 rounded loading-skeleton w-20"></div>
+                                </div>
+                                <div class="w-12 h-12 bg-gray-200 rounded-lg loading-skeleton"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- KPI Cards -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div id="dashboardContent" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                     <div class="bg-white p-6 rounded-xl shadow-sm card-hover transition-all duration-200">
                         <div class="flex items-center justify-between">
                             <div>
@@ -854,6 +1116,96 @@
             showNotification('Conferência iniciada! Comece escaneando ou digitando os SKUs.', 'success');
         }
 
+        function iniciarConferenciaComProdutos(produtosParaConferencia) {
+            conferenciaAtual.ativa = true;
+            conferenciaAtual.itens = [];
+            conferenciaAtual.produtosConferidos = 0;
+            conferenciaAtual.produtosCorretos = 0;
+            conferenciaAtual.produtosDivergentes = 0;
+            conferenciaAtual.produtosImportados = produtosParaConferencia;
+            
+            // Ir automaticamente para a seção de conferência
+            showSection('conferencia');
+            
+            document.getElementById('conferenciaAtiva').classList.remove('hidden');
+            
+            // Mostrar lista de produtos para conferir
+            mostrarListaProdutosConferencia(produtosParaConferencia);
+            
+            atualizarContadoresConferencia();
+            showNotification(`Conferência iniciada automaticamente com ${produtosParaConferencia.length} produtos da planilha!`, 'success');
+        }
+
+        function mostrarListaProdutosConferencia(produtosParaConferencia) {
+            const container = document.getElementById('itensConferencia');
+            
+            const listaProdutos = `
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                    <h4 class="font-semibold text-blue-800 mb-3">📋 Produtos da Planilha para Conferir:</h4>
+                    <div class="space-y-2 max-h-60 overflow-y-auto">
+                        ${produtosParaConferencia.map(produto => `
+                            <div class="flex items-center justify-between p-2 bg-white rounded border">
+                                <div>
+                                    <p class="font-medium text-sm">${produto.nome}</p>
+                                    <p class="text-xs text-gray-600">SKU: ${produto.sku}</p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-sm font-medium text-blue-600">Esperado: ${produto.quantidadeEsperada}</p>
+                                    <button onclick="conferirProdutoRapido('${produto.sku}', ${produto.quantidadeEsperada})" 
+                                            class="text-xs bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600">
+                                        ✅ Conferir
+                                    </button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="mt-3 text-xs text-blue-700">
+                        💡 <strong>Dica:</strong> Use os botões "Conferir" para confirmar rapidamente as quantidades da planilha, 
+                        ou digite manualmente no campo abaixo para ajustar.
+                    </div>
+                </div>
+            `;
+            
+            container.innerHTML = listaProdutos;
+        }
+
+        function conferirProdutoRapido(sku, quantidadeEsperada) {
+            const produto = produtos.find(p => p.sku === sku);
+            if (!produto) {
+                showNotification('Produto não encontrado!', 'error');
+                return;
+            }
+            
+            const item = {
+                sku: sku,
+                nome: produto.nome,
+                estoqueAtual: produto.estoque,
+                quantidadeConferida: quantidadeEsperada,
+                divergencia: quantidadeEsperada !== produto.estoque
+            };
+            
+            // Verificar se já foi conferido
+            const jaConferido = conferenciaAtual.itens.find(i => i.sku === sku);
+            if (jaConferido) {
+                showNotification('Produto já foi conferido!', 'warning');
+                return;
+            }
+            
+            conferenciaAtual.itens.push(item);
+            conferenciaAtual.produtosConferidos++;
+            
+            if (item.divergencia) {
+                conferenciaAtual.produtosDivergentes++;
+            } else {
+                conferenciaAtual.produtosCorretos++;
+            }
+            
+            atualizarContadoresConferencia();
+            atualizarListaConferencia();
+            
+            showNotification(`${produto.nome} conferido com ${quantidadeEsperada} unidades!`, 'success');
+        }
+
         function adicionarItemConferencia() {
             const sku = document.getElementById('skuConferencia').value.trim();
             const quantidade = parseInt(document.getElementById('quantidadeConferencia').value);
@@ -904,18 +1256,87 @@
 
         function atualizarListaConferencia() {
             const container = document.getElementById('itensConferencia');
-            container.innerHTML = conferenciaAtual.itens.map(item => `
-                <div class="flex items-center justify-between p-3 border rounded-lg ${item.divergencia ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'}">
-                    <div class="flex-1">
-                        <p class="font-medium">${item.nome}</p>
-                        <p class="text-sm text-gray-600">SKU: ${item.sku}</p>
+            
+            let conteudo = '';
+            
+            // Mostrar lista de produtos importados se existir
+            if (conferenciaAtual.produtosImportados && conferenciaAtual.produtosImportados.length > 0) {
+                const produtosRestantes = conferenciaAtual.produtosImportados.filter(p => 
+                    !conferenciaAtual.itens.find(i => i.sku === p.sku)
+                );
+                
+                if (produtosRestantes.length > 0) {
+                    conteudo += `
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                            <h4 class="font-semibold text-blue-800 mb-3">📋 Produtos da Planilha Restantes (${produtosRestantes.length}):</h4>
+                            <div class="space-y-2 max-h-40 overflow-y-auto">
+                                ${produtosRestantes.map(produto => `
+                                    <div class="flex items-center justify-between p-2 bg-white rounded border">
+                                        <div>
+                                            <p class="font-medium text-sm">${produto.nome}</p>
+                                            <p class="text-xs text-gray-600">SKU: ${produto.sku}</p>
+                                        </div>
+                                        <div class="text-right">
+                                            <p class="text-sm font-medium text-blue-600">Esperado: ${produto.quantidadeEsperada}</p>
+                                            <button onclick="conferirProdutoRapido('${produto.sku}', ${produto.quantidadeEsperada})" 
+                                                    class="text-xs bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600">
+                                                ✅ Conferir
+                                            </button>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            
+            // Mostrar produtos já conferidos
+            if (conferenciaAtual.itens.length > 0) {
+                conteudo += `
+                    <div class="mb-4">
+                        <h4 class="font-semibold text-gray-800 mb-3">✅ Produtos Conferidos (${conferenciaAtual.itens.length}):</h4>
+                        <div class="space-y-2">
+                            ${conferenciaAtual.itens.map(item => `
+                                <div class="flex items-center justify-between p-3 border rounded-lg ${item.divergencia ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'}">
+                                    <div class="flex-1">
+                                        <p class="font-medium">${item.nome}</p>
+                                        <p class="text-sm text-gray-600">SKU: ${item.sku}</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="text-sm">Sistema: ${item.estoqueAtual} | Conferido: ${item.quantidadeConferida}</p>
+                                        ${item.divergencia ? '<p class="text-xs text-red-600">⚠️ Divergência</p>' : '<p class="text-xs text-green-600">✅ OK</p>'}
+                                    </div>
+                                    <button onclick="removerItemConferencia('${item.sku}')" class="ml-2 text-red-500 hover:text-red-700 text-xs">
+                                        🗑️
+                                    </button>
+                                </div>
+                            `).join('')}
+                        </div>
                     </div>
-                    <div class="text-right">
-                        <p class="text-sm">Sistema: ${item.estoqueAtual} | Conferido: ${item.quantidadeConferida}</p>
-                        ${item.divergencia ? '<p class="text-xs text-red-600">⚠️ Divergência</p>' : '<p class="text-xs text-green-600">✅ OK</p>'}
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }
+            
+            container.innerHTML = conteudo;
+        }
+
+        function removerItemConferencia(sku) {
+            const index = conferenciaAtual.itens.findIndex(item => item.sku === sku);
+            if (index !== -1) {
+                const item = conferenciaAtual.itens[index];
+                conferenciaAtual.itens.splice(index, 1);
+                conferenciaAtual.produtosConferidos--;
+                
+                if (item.divergencia) {
+                    conferenciaAtual.produtosDivergentes--;
+                } else {
+                    conferenciaAtual.produtosCorretos--;
+                }
+                
+                atualizarContadoresConferencia();
+                atualizarListaConferencia();
+                showNotification('Item removido da conferência!', 'info');
+            }
         }
 
         function finalizarConferencia() {
@@ -1142,6 +1563,8 @@
                             
                             // Adicionar produtos importados
                             let produtosAdicionados = 0;
+                            const produtosParaConferencia = [];
+                            
                             dadosImportados.forEach(item => {
                                 // Verificar se SKU já existe
                                 const produtoExistente = produtos.find(p => p.sku === item.sku);
@@ -1152,24 +1575,35 @@
                                         nome: item.nome,
                                         sku: item.sku,
                                         categoria: 'Importado',
-                                        estoque: item.quantidade,
+                                        estoque: 0, // Iniciar com 0 para conferência
                                         estoqueMin: Math.max(Math.floor(item.quantidade * 0.2), 5),
                                         custo: item.valor || 0,
-                                        status: 'ok'
+                                        status: 'critico'
                                     };
                                     
-                                    novoProduto.status = getStatusProduto(novoProduto);
                                     produtos.unshift(novoProduto);
                                     produtosAdicionados++;
+                                    
+                                    // Adicionar à lista de conferência
+                                    produtosParaConferencia.push({
+                                        sku: item.sku,
+                                        nome: item.nome,
+                                        quantidadeEsperada: item.quantidade
+                                    });
                                 } else {
-                                    // Atualizar produto existente
-                                    produtoExistente.estoque = item.quantidade;
-                                    if (item.valor > 0) {
-                                        produtoExistente.custo = item.valor;
-                                    }
-                                    produtoExistente.status = getStatusProduto(produtoExistente);
+                                    // Para produtos existentes, também adicionar à conferência
+                                    produtosParaConferencia.push({
+                                        sku: item.sku,
+                                        nome: produtoExistente.nome,
+                                        quantidadeEsperada: item.quantidade
+                                    });
                                 }
                             });
+                            
+                            // Iniciar conferência automaticamente com os produtos importados
+                            if (produtosParaConferencia.length > 0) {
+                                iniciarConferenciaComProdutos(produtosParaConferencia);
+                            }
                             
                             // Registrar importação
                             const novaImportacao = {
@@ -1189,7 +1623,7 @@
                             loadDashboard(); // Dashboard agora calcula com base nos dados importados
                             
                             progressContainer.classList.add('hidden');
-                            showNotification(`${produtosAdicionados} produtos importados com sucesso! ${dadosImportados.length - produtosAdicionados} produtos atualizados.`, 'success');
+                            showNotification(`${produtosAdicionados} produtos importados! Conferência iniciada automaticamente. Vá para a aba Conferência.`, 'success');
                         }
                         
                         progressBar.style.width = progress + '%';
@@ -1691,6 +2125,17 @@
         function resetarSistema() {
             showNotification('Resetando sistema...', 'info');
             
+            // Capturar dados antes do reset para mostrar o que foi perdido
+            const dadosAntesReset = {
+                produtos: produtos.length,
+                movimentacoes: movimentacoes.length,
+                conferencias: conferencias.length,
+                importacoes: importacoes.length,
+                valorEstoque: produtos.reduce((total, p) => total + (p.estoque * p.custo), 0),
+                produtosBaixo: produtos.filter(p => p.status === 'baixo').length,
+                produtosCriticos: produtos.filter(p => p.status === 'critico').length
+            };
+            
             // Resetar todos os dados para valores iniciais
             setTimeout(() => {
                 // Limpar produtos (manter apenas alguns exemplos)
@@ -1749,8 +2194,77 @@
                 // Voltar para o dashboard
                 showSection('dashboard');
                 
-                showNotification('Sistema resetado com sucesso! Todos os dados foram limpos.', 'success');
+                // Mostrar resumo do que foi perdido
+                mostrarResumoReset(dadosAntesReset);
             }, 2000);
+        }
+
+        function mostrarResumoReset(dadosAntesReset) {
+            const modal = document.getElementById('modalOverlay');
+            const content = document.getElementById('modalContent');
+            
+            content.innerHTML = `
+                <div class="text-center">
+                    <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span class="text-green-600 text-2xl">✅</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-4">Reset Concluído com Sucesso!</h3>
+                    
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-6 mb-6">
+                        <h4 class="text-lg font-semibold text-red-800 mb-4">📊 Resumo dos Dados Removidos:</h4>
+                        
+                        <div class="grid grid-cols-2 gap-4 text-sm">
+                            <div class="bg-white p-3 rounded border">
+                                <p class="text-gray-600">Produtos Cadastrados</p>
+                                <p class="text-xl font-bold text-red-600">${dadosAntesReset.produtos}</p>
+                            </div>
+                            <div class="bg-white p-3 rounded border">
+                                <p class="text-gray-600">Movimentações</p>
+                                <p class="text-xl font-bold text-red-600">${dadosAntesReset.movimentacoes}</p>
+                            </div>
+                            <div class="bg-white p-3 rounded border">
+                                <p class="text-gray-600">Conferências</p>
+                                <p class="text-xl font-bold text-red-600">${dadosAntesReset.conferencias}</p>
+                            </div>
+                            <div class="bg-white p-3 rounded border">
+                                <p class="text-gray-600">Importações</p>
+                                <p class="text-xl font-bold text-red-600">${dadosAntesReset.importacoes}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4 p-4 bg-red-100 rounded-lg">
+                            <p class="text-sm text-red-700 mb-2"><strong>💰 Valor Total do Estoque Perdido:</strong></p>
+                            <p class="text-2xl font-bold text-red-800">R$ ${dadosAntesReset.valorEstoque.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
+                        </div>
+                        
+                        ${dadosAntesReset.produtosBaixo > 0 || dadosAntesReset.produtosCriticos > 0 ? `
+                        <div class="mt-4 p-3 bg-yellow-100 rounded-lg">
+                            <p class="text-sm text-yellow-700">
+                                <strong>⚠️ Alertas Removidos:</strong> 
+                                ${dadosAntesReset.produtosBaixo} produtos com estoque baixo, 
+                                ${dadosAntesReset.produtosCriticos} produtos críticos
+                            </p>
+                        </div>
+                        ` : ''}
+                    </div>
+                    
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                        <p class="text-sm text-green-700">
+                            ✨ <strong>Sistema Limpo!</strong> Agora você pode começar do zero com 2 produtos exemplo.
+                            <br>Importe seus dados ou cadastre novos produtos para começar.
+                        </p>
+                    </div>
+                    
+                    <button onclick="closeModal()" class="px-8 py-3 gradient-bg text-white rounded-lg hover:opacity-90 transition-opacity">
+                        🚀 Começar do Zero
+                    </button>
+                </div>
+            `;
+            
+            modal.classList.remove('hidden');
+            
+            // Mostrar notificação adicional
+            showNotification('Sistema resetado! Confira o resumo dos dados removidos.', 'success');
         }
 
         function fazerBackup() {
@@ -1890,10 +2404,431 @@
             }, type === 'warning' ? 5000 : 3000);
         }
 
+        // Snake Game Logic
+        let gameState = {
+            snake: [{x: 150, y: 150}],
+            food: {x: 75, y: 75},
+            direction: {x: 15, y: 0},
+            nextDirection: {x: 15, y: 0},
+            score: 0,
+            isPlaying: false,
+            gameLoop: null
+        };
+
+        function initGame() {
+            gameState.snake = [{x: 150, y: 150}];
+            gameState.food = generateFood();
+            gameState.direction = {x: 15, y: 0};
+            gameState.nextDirection = {x: 15, y: 0};
+            gameState.score = 0;
+            updateScore();
+            drawGame();
+        }
+
+        function generateFood() {
+            const boardSize = 300;
+            const pixelSize = 15;
+            const maxPos = boardSize - pixelSize;
+            
+            let newFood;
+            do {
+                newFood = {
+                    x: Math.floor(Math.random() * (maxPos / pixelSize)) * pixelSize,
+                    y: Math.floor(Math.random() * (maxPos / pixelSize)) * pixelSize
+                };
+            } while (gameState.snake.some(segment => segment.x === newFood.x && segment.y === newFood.y));
+            
+            return newFood;
+        }
+
+        function drawGame() {
+            const board = document.getElementById('gameBoard');
+            board.innerHTML = '';
+            
+            // Draw snake
+            gameState.snake.forEach((segment, index) => {
+                const pixel = document.createElement('div');
+                pixel.className = 'snake-pixel';
+                pixel.style.left = segment.x + 'px';
+                pixel.style.top = segment.y + 'px';
+                if (index === 0) {
+                    pixel.style.background = '#059669'; // Head is darker
+                }
+                board.appendChild(pixel);
+            });
+            
+            // Draw food
+            const foodPixel = document.createElement('div');
+            foodPixel.className = 'food-pixel';
+            foodPixel.style.left = gameState.food.x + 'px';
+            foodPixel.style.top = gameState.food.y + 'px';
+            board.appendChild(foodPixel);
+        }
+
+        function moveSnake() {
+            gameState.direction = gameState.nextDirection;
+            const head = {...gameState.snake[0]};
+            head.x += gameState.direction.x;
+            head.y += gameState.direction.y;
+            
+            // Check wall collision
+            if (head.x < 0 || head.x >= 300 || head.y < 0 || head.y >= 300) {
+                gameOver();
+                return;
+            }
+            
+            // Check self collision
+            if (gameState.snake.some(segment => segment.x === head.x && segment.y === head.y)) {
+                gameOver();
+                return;
+            }
+            
+            gameState.snake.unshift(head);
+            
+            // Check food collision
+            if (head.x === gameState.food.x && head.y === gameState.food.y) {
+                gameState.score += 10;
+                updateScore();
+                gameState.food = generateFood();
+            } else {
+                gameState.snake.pop();
+            }
+            
+            drawGame();
+        }
+
+        function changeDirection(newDirection) {
+            const directions = {
+                'up': {x: 0, y: -15},
+                'down': {x: 0, y: 15},
+                'left': {x: -15, y: 0},
+                'right': {x: 15, y: 0}
+            };
+            
+            const dir = directions[newDirection];
+            if (dir && 
+                (dir.x !== -gameState.direction.x || dir.y !== -gameState.direction.y)) {
+                gameState.nextDirection = dir;
+            }
+        }
+
+        function toggleGame() {
+            const playBtn = document.getElementById('playBtn');
+            
+            if (gameState.isPlaying) {
+                // Pause game
+                clearInterval(gameState.gameLoop);
+                gameState.isPlaying = false;
+                playBtn.textContent = '▶️';
+            } else {
+                // Start/Resume game
+                if (gameState.snake.length === 1 && gameState.score === 0) {
+                    initGame();
+                }
+                gameState.gameLoop = setInterval(moveSnake, 150);
+                gameState.isPlaying = true;
+                playBtn.textContent = '⏸️';
+            }
+        }
+
+        function gameOver() {
+            clearInterval(gameState.gameLoop);
+            gameState.isPlaying = false;
+            document.getElementById('playBtn').textContent = '🔄';
+            
+            setTimeout(() => {
+                alert(`Game Over! Pontuação: ${gameState.score}\nClique em 🔄 para jogar novamente!`);
+            }, 100);
+        }
+
+        function updateScore() {
+            document.getElementById('gameScore').textContent = gameState.score;
+        }
+
+        // Connection Monitoring
+        let isOnline = navigator.onLine;
+        let connectionCheckInterval;
+
+        function updateConnectionStatus() {
+            const statusElement = document.getElementById('connectionStatus');
+            const offlineGame = document.getElementById('offlineGame');
+            
+            if (navigator.onLine) {
+                statusElement.textContent = '🟢 Online';
+                statusElement.className = 'connection-status online';
+                if (!isOnline) {
+                    // Just came back online
+                    hideOfflineGame();
+                }
+                isOnline = true;
+            } else {
+                statusElement.textContent = '🔴 Offline';
+                statusElement.className = 'connection-status offline';
+                if (isOnline) {
+                    // Just went offline
+                    showOfflineGame();
+                }
+                isOnline = false;
+            }
+        }
+
+        function showOfflineGame() {
+            document.getElementById('offlineGame').style.display = 'flex';
+            initGame();
+        }
+
+        function hideOfflineGame() {
+            const offlineGame = document.getElementById('offlineGame');
+            offlineGame.style.display = 'none';
+            
+            // Stop game if playing
+            if (gameState.isPlaying) {
+                clearInterval(gameState.gameLoop);
+                gameState.isPlaying = false;
+            }
+        }
+
+        // Keyboard controls for game
+        document.addEventListener('keydown', function(e) {
+            const gameVisible = document.getElementById('offlineGame').style.display === 'flex';
+            
+            if (gameVisible) {
+                switch(e.key) {
+                    case 'ArrowUp':
+                        e.preventDefault();
+                        changeDirection('up');
+                        break;
+                    case 'ArrowDown':
+                        e.preventDefault();
+                        changeDirection('down');
+                        break;
+                    case 'ArrowLeft':
+                        e.preventDefault();
+                        changeDirection('left');
+                        break;
+                    case 'ArrowRight':
+                        e.preventDefault();
+                        changeDirection('right');
+                        break;
+                    case ' ':
+                        e.preventDefault();
+                        toggleGame();
+                        break;
+                    case 'Escape':
+                        e.preventDefault();
+                        if (isOnline) {
+                            hideOfflineGame();
+                        }
+                        break;
+                }
+            }
+        });
+
+        // Enhanced processarArquivo with loading states
+        function processarArquivoComLoading(file) {
+            // Show loading state
+            showDashboardLoading();
+            
+            // Process file with delay to show loading
+            setTimeout(() => {
+                processarArquivo(file);
+            }, 1000);
+        }
+
+        function showDashboardLoading() {
+            document.getElementById('dashboardLoading').classList.remove('hidden');
+            document.getElementById('dashboardContent').classList.add('hidden');
+        }
+
+        function hideDashboardLoading() {
+            document.getElementById('dashboardLoading').classList.add('hidden');
+            document.getElementById('dashboardContent').classList.remove('hidden');
+        }
+
+        // Override original processarArquivo to use loading version
+        const originalProcessarArquivo = processarArquivo;
+        processarArquivo = function(file) {
+            const allowedTypes = ['.xlsx', '.xls', '.csv'];
+            const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+            
+            if (!allowedTypes.includes(fileExtension)) {
+                showNotification('Formato de arquivo não suportado!', 'error');
+                return;
+            }
+
+            const progressContainer = document.getElementById('importProgress');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            
+            progressContainer.classList.remove('hidden');
+            
+            // Ler arquivo
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    let dadosImportados = [];
+                    
+                    if (fileExtension === '.csv') {
+                        // Processar CSV
+                        const texto = e.target.result;
+                        const linhas = texto.split('\n');
+                        const cabecalho = linhas[0].toLowerCase().split(',').map(col => col.trim());
+                        
+                        // Mapear colunas obrigatórias
+                        const colSku = encontrarColuna(cabecalho, ['codigo', 'sku', 'code', 'id']);
+                        const colNome = encontrarColuna(cabecalho, ['descricao', 'nome', 'produto', 'description']);
+                        const colQuantidade = encontrarColuna(cabecalho, ['estoque', 'quantidade', 'qty', 'quantity', 'stock']);
+                        
+                        if (colSku === -1 || colNome === -1 || colQuantidade === -1) {
+                            throw new Error('Colunas obrigatórias não encontradas. Verifique se a planilha contém: Codigo, Descricao e Estoque');
+                        }
+                        
+                        for (let i = 1; i < linhas.length && dadosImportados.length < 10000; i++) {
+                            const linha = linhas[i].split(',').map(col => col.trim());
+                            if (linha.length > 1 && linha[colNome] && linha[colSku]) {
+                                dadosImportados.push({
+                                    sku: linha[colSku],
+                                    nome: linha[colNome],
+                                    quantidade: parseInt(linha[colQuantidade]) || 0,
+                                    valor: 0 // Valor padrão já que não é obrigatório
+                                });
+                            }
+                        }
+                        
+                        // Verificar limite máximo
+                        if (dadosImportados.length >= 10000) {
+                            showNotification('Limite de 10.000 produtos atingido. Apenas os primeiros 10.000 serão importados.', 'warning');
+                        }
+                    } else {
+                        // Para Excel, simular dados baseados no nome do arquivo
+                        const nomes = ['Produto A', 'Produto B', 'Produto C', 'Produto D', 'Produto E'];
+                        for (let i = 0; i < 5; i++) {
+                            dadosImportados.push({
+                                sku: `COD-${String(i + 1).padStart(3, '0')}`,
+                                nome: nomes[i],
+                                quantidade: Math.floor(Math.random() * 100) + 1,
+                                valor: 0 // Valor padrão
+                            });
+                        }
+                    }
+                    
+                    // Simular progresso
+                    let progress = 0;
+                    const interval = setInterval(() => {
+                        progress += Math.random() * 25;
+                        if (progress >= 100) {
+                            progress = 100;
+                            clearInterval(interval);
+                            
+                            // Show dashboard loading while processing
+                            showDashboardLoading();
+                            
+                            // Process data after a delay
+                            setTimeout(() => {
+                                // Adicionar produtos importados
+                                let produtosAdicionados = 0;
+                                const produtosParaConferencia = [];
+                                
+                                dadosImportados.forEach(item => {
+                                    // Verificar se SKU já existe
+                                    const produtoExistente = produtos.find(p => p.sku === item.sku);
+                                    
+                                    if (!produtoExistente) {
+                                        const novoProduto = {
+                                            id: Math.max(...produtos.map(p => p.id), 0) + 1 + produtosAdicionados,
+                                            nome: item.nome,
+                                            sku: item.sku,
+                                            categoria: 'Importado',
+                                            estoque: 0, // Iniciar com 0 para conferência
+                                            estoqueMin: Math.max(Math.floor(item.quantidade * 0.2), 5),
+                                            custo: item.valor || 0,
+                                            status: 'critico'
+                                        };
+                                        
+                                        produtos.unshift(novoProduto);
+                                        produtosAdicionados++;
+                                        
+                                        // Adicionar à lista de conferência
+                                        produtosParaConferencia.push({
+                                            sku: item.sku,
+                                            nome: item.nome,
+                                            quantidadeEsperada: item.quantidade
+                                        });
+                                    } else {
+                                        // Para produtos existentes, também adicionar à conferência
+                                        produtosParaConferencia.push({
+                                            sku: item.sku,
+                                            nome: produtoExistente.nome,
+                                            quantidadeEsperada: item.quantidade
+                                        });
+                                    }
+                                });
+                                
+                                // Hide dashboard loading
+                                hideDashboardLoading();
+                                
+                                // Iniciar conferência automaticamente com os produtos importados
+                                if (produtosParaConferencia.length > 0) {
+                                    iniciarConferenciaComProdutos(produtosParaConferencia);
+                                }
+                                
+                                // Registrar importação
+                                const novaImportacao = {
+                                    id: importacoes.length + 1,
+                                    data: new Date().toISOString().replace('T', ' ').substring(0, 16),
+                                    tipo: fileExtension === '.csv' ? 'CSV' : 'Planilha Excel',
+                                    origem: file.name,
+                                    registros: dadosImportados.length,
+                                    status: 'Concluída'
+                                };
+                                
+                                importacoes.unshift(novaImportacao);
+                                
+                                // Atualizar interfaces com dados recalculados
+                                loadImportacao();
+                                loadEstoque();
+                                loadDashboard(); // Dashboard agora calcula com base nos dados importados
+                                
+                                progressContainer.classList.add('hidden');
+                                showNotification(`${produtosAdicionados} produtos importados! Conferência iniciada automaticamente. Dashboard atualizado com as novas informações.`, 'success');
+                            }, 2000); // 2 second delay to show loading
+                        }
+                        
+                        progressBar.style.width = progress + '%';
+                        progressText.textContent = `Processando... ${Math.round(progress)}%`;
+                    }, 300);
+                    
+                } catch (error) {
+                    progressContainer.classList.add('hidden');
+                    hideDashboardLoading();
+                    showNotification(`Erro ao processar arquivo: ${error.message}`, 'error');
+                }
+            };
+            
+            if (fileExtension === '.csv') {
+                reader.readAsText(file);
+            } else {
+                reader.readAsArrayBuffer(file);
+            }
+        };
+
         // Inicialização
         document.addEventListener('DOMContentLoaded', function() {
             showSection('dashboard');
+            
+            // Initialize connection monitoring
+            updateConnectionStatus();
+            
+            // Check connection every 5 seconds
+            connectionCheckInterval = setInterval(updateConnectionStatus, 5000);
+            
+            // Listen for online/offline events
+            window.addEventListener('online', updateConnectionStatus);
+            window.addEventListener('offline', updateConnectionStatus);
+            
+            // Initialize game
+            initGame();
         });
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'968839e434c29321',t:'MTc1NDA4MTYxOC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'968874f0161e7e11',t:'MTc1NDA4NDAzNy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
